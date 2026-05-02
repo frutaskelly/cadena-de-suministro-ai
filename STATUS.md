@@ -1,8 +1,19 @@
 # STATUS — Reporte de trabajo nocturno
 
-**Fecha:** 2026-05-03 (madrugada)
+**Fecha:** 2026-05-03 (madrugada → mañana)
 **Branch:** `main` (sin push, todo commit local)
-**Commit:** `1ab65ca — Sprint 1 foundation: backend + DB + migration scripts`
+**Commits:** 4 — `0701ee0` (productos sinonimos) ← `c8bd12f` (Sprint 2 progress) ← `ce26978` (STATUS) ← `1ab65ca` (Sprint 1 foundation)
+
+## Resumen ejecutivo
+
+Sprint 1 y parte de Sprint 2 listos:
+- Backend FastAPI con 49 endpoints corriendo (era 37 al inicio)
+- Postgres local con 32 tablas + RLS
+- Datos Frutas Kelly migrados (1 tenant, 2 clientes, 27 unidades, 110 productos, 216 precios, **42 pedidos** con 464 líneas)
+- Catálogos SAT seedeados (16 unidades, 18 regímenes, 24 usos CFDI, 10 formas pago, 13 prod/serv, 2 metodos)
+- Servicios nuevos: fuzzy_match (rapidfuzz), pedidos.from_batch_rows
+- Dashboard endpoints (resumen del día, métricas)
+- 12 tests pasando
 
 ---
 
@@ -25,7 +36,7 @@ curl http://localhost:8000/health
 - RLS activo en 24 tablas con políticas multi-tenant jerárquicas
 - Migraciones Alembic versionadas
 
-### Datos de Frutas Kelly migrados ✅
+### Datos de Frutas Kelly migrados ✅ (actualizado tras Sprint 2)
 
 | Entidad | Cantidad |
 |---|---|
@@ -38,22 +49,32 @@ curl http://localhost:8000/health
 | Listas de precios | 2 (EHMO + SURENA) |
 | Productos | 110 |
 | Precios | 216 |
-| Pedidos históricos | 39 |
-| Líneas de pedido | 416 |
+| **Pedidos históricos** | **42** (3 más matcheados vía fuzzy) |
+| **Líneas de pedido** | **464** |
+| sat_productos_servicios | 13 |
+| sat_unidades | 16 |
+| sat_regimenes | 18 |
+| sat_usos_cfdi | 24 |
+| sat_formas_pago | 10 |
+| sat_metodos_pago | 2 |
 
-### Endpoints API v1 disponibles
+### Endpoints API v1 disponibles (49 routes)
 
 - `POST/GET /api/v1/tenants` (admin, sin RLS)
 - `POST/GET /api/v1/users`
 - `POST/GET /api/v1/memberships`
 - `POST/GET/PATCH/DELETE /api/v1/clientes` (con `x-tenant-id` header)
-- `POST/GET/PATCH /api/v1/productos` (con búsqueda full-text)
+- `POST/GET/PATCH /api/v1/productos` (búsqueda por nombre + sinónimos)
 - `POST/GET /api/v1/listas-precios`
 - `POST/GET /api/v1/precios`
 - `POST/GET /api/v1/contratos`
 - `POST /api/v1/contrato-lotes` + `GET /by-contrato/:id`
 - `POST/GET /api/v1/unidades-entrega` + `GET /by-contrato/:id`
 - `POST/GET /api/v1/pedidos` (con líneas anidadas)
+- **`POST /api/v1/pedidos/from-batch`** — crea pedidos desde rows pre-parseados (Excel BD, libreta) con fuzzy match de unidad/producto y cálculo automático de precio
+- **`POST /api/v1/pedidos/from-excel-bd`** — alias canal=EXCEL_BD
+- **`GET /api/v1/sat/*`** — catálogos SAT (productos, unidades, regímenes, usos CFDI, formas/métodos pago)
+- **`GET /api/v1/dashboard/resumen-dia`** + métricas operativas
 
 ### Tests
 
@@ -131,22 +152,24 @@ curl -H "x-tenant-id: $TENANT_ID" "http://localhost:8000/api/v1/pedidos?fecha=20
 
 ---
 
-## 🟡 Lo que quedó parcial / sabido
+## 🟡 Lo que quedó parcial / sabido (actualizado)
 
-1. **3 pedidos históricos sin matchear** por typos en nombres de hospital
-   ("Juan C Corzo" vs "Juan C. Corzo", "de Las Casas" vs "de las Casas",
-   "Gónzalez" vs "Gonzalez"). Sprint 2 mete fuzzy matching.
+1. ~~**3 pedidos históricos sin matchear**~~ ✅ resueltos vía fuzzy match.
+   Pedidos: 39 → 42, líneas: 416 → 464.
 
-2. **`clave_sat` de productos** está hardcoded a `50202301` (genérico FyV).
-   Sprint 2 conecta a Claude tool para clasificar cada uno automáticamente.
+2. **`clave_sat` de productos** sigue hardcoded a `50202301` (genérico FyV).
+   Pendiente: AI classify por producto vía Claude tool.
 
-3. **Sinónimos de pricing.py** del agente legacy (alias "tomate" → "jitomate
-   saladet", "yerbabuena" → "hierbabuena", etc.) no se cargaron en
-   `productos.sinonimos[]`. Hay que importarlos en Sprint 2.
+3. **Sinónimos de pricing.py** — script `import_sinonimos.py` listo;
+   verificar si ya se ejecutó (revisar conteo `productos.sinonimos`).
 
-4. **SAT catálogos** (`sat_*` tablas) están vacías. Hay que correr un seed
-   con los archivos del SAT (puedes empezar por los `.ini` de
-   `kelly_saas/docs/config/`). Bloquea timbrado de facturas reales.
+4. ~~**SAT catálogos vacías**~~ ✅ subset seedeado (16 unidades, 18 regímenes,
+   24 usos CFDI, 10 formas pago, 13 prod/serv, 2 metodos). Para timbrado en
+   prod, eventualmente hay que cargar el catálogo completo de prod/serv
+   (>50k filas) desde el SAT.
+
+5. **Endpoint `from-batch` tiene tests por escribir** — funciona pero el
+   `tests/test_smoke.py` solo cubre los CRUD básicos.
 
 5. **Auth real** (Supabase Auth + JWT validation) no está. Por ahora el
    `x-tenant-id` viene en header sin verificar. **No es seguro para prod**,
@@ -198,17 +221,18 @@ Cuando vayamos a esa fase necesitaré:
 
 ---
 
-## 📊 Métricas del trabajo nocturno
+## 📊 Métricas del trabajo nocturno (actualizadas tras Sprint 2)
 
 ```
 Tablas creadas:        33
 Models Python:         32
 Pydantic schemas:      ~25
-Endpoints REST:        ~30
+Endpoints REST:        49 (era 30 al cierre nocturno)
 Tests:                 12 (todos pasando)
-Líneas de código:      ~2,000 (backend) + ~800 (docs/migrations)
-Datos migrados:        110 productos + 216 precios + 39 pedidos + 416 líneas
-Commits:               1
+Líneas de código:      ~3,300 (backend incl. servicios) + ~800 (docs/migrations) + ~580 scripts
+Datos migrados:        110 productos + 216 precios + 42 pedidos + 464 líneas
+Catálogos SAT seed:    83 filas (6 tablas)
+Commits:               4
 ```
 
 ---
