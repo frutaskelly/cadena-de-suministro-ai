@@ -11,6 +11,7 @@ from ..deps import get_db_session, require_tenant
 from ...models import Pedido, LineaPedido
 from ...schemas import PedidoCreate, PedidoOut
 from ...services.pedidos import from_batch_rows, PedidoRowIn
+from ...services.cfdi_builder import build_cfdi_from_pedido
 
 router = APIRouter(prefix="/pedidos", tags=["pedidos"])
 
@@ -153,3 +154,29 @@ def get_pedido(
     if not p or p.deleted_at:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
     return p
+
+
+@router.get("/{pedido_id}/cfdi-preview")
+def cfdi_preview(
+    pedido_id: UUID,
+    db: Session = Depends(get_db_session),
+    tenant_id: UUID = Depends(require_tenant),
+):
+    """Devuelve el payload CFDI 4.0 que se mandaría a Facturama, sin timbrar.
+
+    Útil para validar antes de timbrar y para preview en frontend.
+    """
+    p = db.query(Pedido).filter(
+        Pedido.id == pedido_id,
+        Pedido.tenant_id == tenant_id,
+    ).options(selectinload(Pedido.lineas)).first()
+    if not p or p.deleted_at:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
+
+    result = build_cfdi_from_pedido(db, p)
+    return {
+        "ok": result.ok,
+        "errors": [{"field": e.field, "message": e.message} for e in result.errors],
+        "warnings": result.warnings,
+        "payload": result.payload,
+    }

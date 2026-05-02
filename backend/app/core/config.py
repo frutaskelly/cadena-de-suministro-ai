@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
 
     FACTURAMA_API_KEY: str = ""
+    FACTURAMA_USER: str = ""
+    FACTURAMA_PASSWORD: str = ""
     FACTURAMA_BASE_URL: str = "https://apisandbox.facturama.mx"
 
     PORT: int = 8000
