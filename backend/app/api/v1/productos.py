@@ -11,6 +11,7 @@ from ...schemas import (
     ProductoCreate, ProductoOut, ProductoUpdate,
     ListaPreciosCreate, ListaPreciosOut, PrecioCreate, PrecioOut,
 )
+from ...services.pedidos import _resolve_producto, _resolve_precio
 
 router = APIRouter(prefix="/productos", tags=["productos"])
 
@@ -64,11 +65,55 @@ def list_productos(
     if q:
         nq = _normalize(q)
         like = f"%{nq}%"
+        # Match contra nombre_normalizado, sku, o cualquier elemento del array sinonimos
         query = query.filter(or_(
             Producto.nombre_normalizado.like(like),
             Producto.sku_interno.ilike(f"%{q}%"),
+            Producto.sinonimos.any(nq),
         ))
     return query.order_by(Producto.nombre).offset(offset).limit(limit).all()
+
+
+@router.get("/resolve")
+def resolve_producto(
+    alimento: str = Query(..., description="Texto libre del alimento"),
+    lista_id: Optional[UUID] = Query(None, description="Si se manda, también devuelve precio"),
+    presentacion: str = Query("KILO"),
+    db: Session = Depends(get_db_session),
+    tenant_id: UUID = Depends(require_tenant),
+):
+    """Resuelve un alimento (texto libre) al producto del catálogo.
+
+    Considera sinónimos, normalización (acentos/case), y containment.
+    Si se manda `lista_id` también devuelve el precio.
+    """
+    p = _resolve_producto(db, tenant_id, alimento)
+    if not p:
+        return {"matched": False, "input": alimento, "producto": None, "precio": None}
+    out = {
+        "matched": True,
+        "input": alimento,
+        "producto": {
+            "id": str(p.id),
+            "sku": p.sku_interno,
+            "nombre": p.nombre,
+            "presentacion_default": p.presentacion_default,
+            "categoria": p.categoria,
+            "sinonimos": list(p.sinonimos or []),
+            "clave_sat": p.clave_sat,
+            "unidad_sat": p.unidad_sat,
+        },
+        "precio": None,
+    }
+    if lista_id:
+        precio = _resolve_precio(db, lista_id, p.id, presentacion)
+        if precio is not None:
+            out["precio"] = {
+                "lista_id": str(lista_id),
+                "presentacion": presentacion,
+                "precio_unitario": float(precio),
+            }
+    return out
 
 
 @router.get("/{producto_id}", response_model=ProductoOut)
