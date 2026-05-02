@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .core.config import settings
-from .api.v1 import tenants, clientes, productos, contratos, pedidos
+from .api.v1 import tenants, clientes, productos, contratos, pedidos, sat, dashboard
 
 logging.basicConfig(level=getattr(logging, settings.LOG_LEVEL))
 log = logging.getLogger(__name__)
@@ -50,6 +50,8 @@ app.include_router(contratos.router, prefix="/api/v1")
 app.include_router(contratos.lotes_router, prefix="/api/v1")
 app.include_router(contratos.unidades_router, prefix="/api/v1")
 app.include_router(pedidos.router, prefix="/api/v1")
+app.include_router(sat.router, prefix="/api/v1")
+app.include_router(dashboard.router, prefix="/api/v1")
 
 
 @app.on_event("startup")
