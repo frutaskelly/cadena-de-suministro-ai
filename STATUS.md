@@ -1,19 +1,21 @@
-# STATUS — Reporte de trabajo nocturno
+# STATUS — Reporte de la sesión del 2026-05-03
 
 **Fecha:** 2026-05-03 (madrugada → mañana)
 **Branch:** `main` (sin push, todo commit local)
-**Commits:** 4 — `0701ee0` (productos sinonimos) ← `c8bd12f` (Sprint 2 progress) ← `ce26978` (STATUS) ← `1ab65ca` (Sprint 1 foundation)
+**Commits:** 6 — `cb95ad8` (Facturama+CFDI builder) ← `f2cf924` (STATUS Sprint 2) ← `0701ee0` (sinonimos) ← `c8bd12f` (Sprint 2 progress) ← `ce26978` (STATUS) ← `1ab65ca` (Sprint 1 foundation)
+**Próximo commit pendiente:** Sprint 5 frontend + tests + clave_sat classifier (esta sesión)
 
 ## Resumen ejecutivo
 
-Sprint 1 y parte de Sprint 2 listos:
-- Backend FastAPI con 49 endpoints corriendo (era 37 al inicio)
+Sprint 1 ✅, Sprint 2 ✅, Sprint 3 (prep) ✅, Sprint 5 (skeleton) ✅, Sprint 6 (prep) ✅:
+- Backend FastAPI con **52 endpoints** corriendo (era 30 al inicio)
+- **56 tests pasando** (era 12 al inicio)
 - Postgres local con 32 tablas + RLS
-- Datos Frutas Kelly migrados (1 tenant, 2 clientes, 27 unidades, 110 productos, 216 precios, **42 pedidos** con 464 líneas)
-- Catálogos SAT seedeados (16 unidades, 18 regímenes, 24 usos CFDI, 10 formas pago, 13 prod/serv, 2 metodos)
-- Servicios nuevos: fuzzy_match (rapidfuzz), pedidos.from_batch_rows
-- Dashboard endpoints (resumen del día, métricas)
-- 12 tests pasando
+- Datos Frutas Kelly migrados (1 tenant, 2 clientes, 27 unidades, 110 productos, 216 precios, **42 pedidos** con 464 líneas — 3 más matcheados vía fuzzy)
+- Catálogos SAT seedeados (83 filas en 6 tablas)
+- Servicios nuevos: fuzzy_match, pedidos.from_batch_rows, cfdi_builder, facturama client, clave_sat_classifier (Claude)
+- **Frontend operator dashboard** estático en HTML+JS (servido desde FastAPI, sin Node)
+- Dashboard endpoints (resumen del día, top productos/unidades, líneas sin producto)
 
 ---
 
@@ -22,12 +24,14 @@ Sprint 1 y parte de Sprint 2 listos:
 ### Backend FastAPI corriendo en http://localhost:8000
 
 ```bash
-# Ver docs interactivas:
+# Operator dashboard (NUEVO en esta sesión):
+open http://localhost:8000/
+
+# Docs interactivas:
 open http://localhost:8000/docs
 
 # Health:
 curl http://localhost:8000/health
-# {"status":"ok","version":"0.1.0","env":"development"}
 ```
 
 ### Base de datos Postgres local (puerto 5433)
@@ -36,7 +40,7 @@ curl http://localhost:8000/health
 - RLS activo en 24 tablas con políticas multi-tenant jerárquicas
 - Migraciones Alembic versionadas
 
-### Datos de Frutas Kelly migrados ✅ (actualizado tras Sprint 2)
+### Datos de Frutas Kelly migrados ✅
 
 | Entidad | Cantidad |
 |---|---|
@@ -47,7 +51,7 @@ curl http://localhost:8000/health
 | Lotes de contrato | 2 (Lote 5 FyV) |
 | Unidades de entrega | 27 (21 hospitales + 6 comedores) |
 | Listas de precios | 2 (EHMO + SURENA) |
-| Productos | 110 |
+| Productos | 110 (3 con sinónimos importados del agente) |
 | Precios | 216 |
 | **Pedidos históricos** | **42** (3 más matcheados vía fuzzy) |
 | **Líneas de pedido** | **464** |
@@ -58,145 +62,165 @@ curl http://localhost:8000/health
 | sat_formas_pago | 10 |
 | sat_metodos_pago | 2 |
 
-### Endpoints API v1 disponibles (49 routes)
+### Endpoints API v1 (52 routes)
 
-- `POST/GET /api/v1/tenants` (admin, sin RLS)
+**Existentes** (Sprint 1):
+- `POST/GET /api/v1/tenants`
 - `POST/GET /api/v1/users`
 - `POST/GET /api/v1/memberships`
-- `POST/GET/PATCH/DELETE /api/v1/clientes` (con `x-tenant-id` header)
-- `POST/GET/PATCH /api/v1/productos` (búsqueda por nombre + sinónimos)
-- `POST/GET /api/v1/listas-precios`
-- `POST/GET /api/v1/precios`
-- `POST/GET /api/v1/contratos`
-- `POST /api/v1/contrato-lotes` + `GET /by-contrato/:id`
-- `POST/GET /api/v1/unidades-entrega` + `GET /by-contrato/:id`
-- `POST/GET /api/v1/pedidos` (con líneas anidadas)
-- **`POST /api/v1/pedidos/from-batch`** — crea pedidos desde rows pre-parseados (Excel BD, libreta) con fuzzy match de unidad/producto y cálculo automático de precio
-- **`POST /api/v1/pedidos/from-excel-bd`** — alias canal=EXCEL_BD
-- **`GET /api/v1/sat/*`** — catálogos SAT (productos, unidades, regímenes, usos CFDI, formas/métodos pago)
-- **`GET /api/v1/dashboard/resumen-dia`** + métricas operativas
+- `POST/GET/PATCH/DELETE /api/v1/clientes`
+- `POST/GET /api/v1/listas-precios` + `/precios`
+- `POST/GET /api/v1/contratos` + `/contrato-lotes` + `/unidades-entrega`
+- `POST/GET /api/v1/pedidos`
 
-### Tests
+**Nuevos en esta sesión** (Sprint 2 + 3 + 6):
+- `POST /api/v1/pedidos/from-batch` — crea pedidos desde rows (Excel BD, libreta) con fuzzy match
+- `POST /api/v1/pedidos/from-excel-bd` — alias canal=EXCEL_BD
+- `GET /api/v1/pedidos/{id}/cfdi-preview` — payload CFDI 4.0 sin timbrar
+- `GET /api/v1/productos/resolve?alimento=…` — resuelve texto libre a producto del catálogo
+- `POST /api/v1/productos/{id}/classify-clave-sat[?apply=true]` — Claude clasifica clave SAT
+- `GET /api/v1/sat/{formas-pago,metodos-pago,regimenes,usos-cfdi,unidades,productos-servicios}`
+- `GET /api/v1/dashboard/{resumen-dia,top-productos,top-unidades,lineas-sin-producto}`
+
+### Servicios reutilizables (`backend/app/services/`)
+
+- **`fuzzy_match.py`** — `normalize()` + `best_match()` con rapidfuzz; resuelve typos como "Juan C Corzo" ↔ "Juan C. Corzo"
+- **`pedidos.py`** — `from_batch_rows()` agrupa por unidad, fuzzy-matchea, resuelve productos vía sinónimos+containment, calcula precios
+- **`cfdi_builder.py`** — `build_cfdi_from_pedido()` arma payload Facturama API con validaciones de emisor/receptor/líneas
+- **`facturama.py`** — cliente HTTP minimal (lazy config, sandbox por default)
+- **`clave_sat_classifier.py`** — Claude Haiku clasifica producto → c_ClaveProdServ con prompt caching
+
+### Frontend operator dashboard (estático)
+
+Sin Node.js — funciona ya, servido desde FastAPI.
+
+[frontend/index.html](frontend/index.html) — 6 pestañas:
+1. **Dashboard** — resumen del día + top productos + top unidades
+2. **Pedidos** — lista con filtros fecha/estado, badges de estado y review
+3. **Productos** — búsqueda con sinónimos
+4. **Resolver** — input texto libre → JSON del producto matcheado
+5. **Sin match** — productos del agente que faltan en catálogo
+6. **CFDI Preview** — pega un pedido_id, ve el payload CFDI 4.0 que se mandaría
+
+Persiste el `tenant_id` en localStorage.
+
+### Tests — 56 passing en 0.78s
 
 ```bash
 cd backend && source venv/bin/activate && pytest tests/ -v
-# 12 passed in 0.39s ✓
+# 56 passed
 ```
 
-Cubren: health, tenants, RLS header check, clientes (CRUD + search), productos (count + search), listas, contratos, unidades EHMO (21), pedidos, pedido con líneas.
+| Suite | Tests |
+|---|---|
+| test_smoke | 12 |
+| test_fuzzy_match | 7 |
+| test_sat_endpoints | 7 |
+| test_dashboard_endpoints | 6 |
+| test_pedidos_from_batch | 6 |
+| test_resolver | 5 |
+| test_facturama_client | 5 |
+| test_clave_sat_classifier | 5 |
+| test_cfdi_builder | 3 |
 
 ---
 
-## 📁 Estructura del proyecto
+## 📁 Estructura del proyecto (post-sesión)
 
 ```
 cadena-de-suministro-ai/
-├── README.md                      Visión, stack, decisiones
+├── README.md
 ├── STATUS.md                      ← este archivo
-├── Makefile                       make db-start / migrate / seed / run / test / demo
-├── .gitignore
+├── Makefile                       (ahora con: seed-sat, sinonimos, fuzzy-pedidos, seed-all)
 ├── pgdata/                        DB local (gitignored)
 ├── docs/
-│   ├── 01-data-model.md           DDL completo + diagrama
-│   ├── 02-roadmap.md              8 sprints de 2 semanas
-│   └── 04-migration-plan.md       JSONs/Excel/SAE10 → Cadena
+│   ├── 01-data-model.md
+│   ├── 02-roadmap.md
+│   └── 04-migration-plan.md
 ├── backend/
-│   ├── pyproject.toml             (no usado, deps en venv)
-│   ├── .env                       config local (no commiteado)
-│   ├── .env.example
-│   ├── alembic.ini
-│   ├── alembic/
-│   │   └── versions/              2 migraciones (initial schema + RLS)
+│   ├── alembic/versions/          2 migraciones
 │   ├── app/
-│   │   ├── core/                  config, db, base
-│   │   ├── models/                10 archivos, 32 tablas
-│   │   ├── schemas/               5 archivos Pydantic
-│   │   ├── api/v1/                5 archivos endpoints
-│   │   ├── services/              (vacío, para Sprint 2+)
-│   │   └── main.py
-│   └── tests/
-│       └── test_smoke.py          12 tests
+│   │   ├── core/                  config, db
+│   │   ├── models/                32 tablas
+│   │   ├── schemas/               Pydantic
+│   │   ├── api/v1/                tenants, clientes, productos, contratos, pedidos,
+│   │   │                          sat (NEW), dashboard (NEW)
+│   │   ├── services/              fuzzy_match (NEW), pedidos (NEW), cfdi_builder (NEW),
+│   │   │                          facturama (NEW), clave_sat_classifier (NEW)
+│   │   └── main.py                (mount /static + serve frontend)
+│   └── tests/                     56 tests pasando
+├── frontend/                      ← NUEVO
+│   ├── index.html                 6 pestañas
+│   ├── styles.css
+│   └── app.js
 └── scripts/
-    └── migrate_frutas_kelly.py    Migración idempotente
+    ├── migrate_frutas_kelly.py
+    ├── import_sinonimos.py            (NEW: 10 aliases del agente legacy)
+    ├── match_unmatched_pedidos.py     (NEW: rescata 3 pedidos con typos)
+    ├── seed_sat_catalogs.py           (NEW: 83 filas SAT)
+    └── classify_all_clave_sat.py      (NEW: bulk Claude classifier)
 ```
 
 ---
 
-## 🚀 Cómo arrancar (cuando despiertes)
+## 🚀 Cómo arrancar
 
-**Estado actual:** backend y Postgres están corriendo en background.
-Si se cayeron por reinicio o lo que sea:
+Backend y Postgres siguen corriendo. Si se cayeron:
 
 ```bash
 cd "/Users/michelzarate/Documents/Claude/Whatsapp Agent/cadena-de-suministro-ai"
-make demo   # arranca DB + migra schema + seed + corre tests
-make run    # levanta backend en :8000
+make demo   # arranca DB + migra + seed-all + tests (incluye sinonimos, SAT, fuzzy)
+make run    # backend en :8000
 ```
 
-Después abre **http://localhost:8000/docs** y juega con la API interactiva.
+Después abre:
+- **http://localhost:8000/** → operator dashboard (NUEVO)
+- **http://localhost:8000/docs** → API interactiva
 
-Para ver datos:
+Para usar el dashboard pega tu tenant_id:
 
 ```bash
 TENANT_ID=$(/opt/homebrew/opt/postgresql@16/bin/psql -h /tmp -p 5433 -U postgres -d cadena_dev -t -c "SELECT id FROM tenants WHERE slug='frutas-kelly';" | tr -d ' ')
-
-# Listar clientes de Frutas Kelly:
-curl -H "x-tenant-id: $TENANT_ID" http://localhost:8000/api/v1/clientes | python3 -m json.tool
-
-# Buscar producto:
-curl -H "x-tenant-id: $TENANT_ID" "http://localhost:8000/api/v1/productos?q=mango&limit=5" | python3 -m json.tool
-
-# Pedidos del 30 de abril:
-curl -H "x-tenant-id: $TENANT_ID" "http://localhost:8000/api/v1/pedidos?fecha=2026-04-30" | python3 -m json.tool
+echo $TENANT_ID
 ```
 
 ---
 
-## 🟡 Lo que quedó parcial / sabido (actualizado)
+## 🟡 Lo que quedó parcial / sabido
 
-1. ~~**3 pedidos históricos sin matchear**~~ ✅ resueltos vía fuzzy match.
-   Pedidos: 39 → 42, líneas: 416 → 464.
+1. ~~**3 pedidos sin matchear**~~ ✅ resueltos (39 → 42 pedidos, 416 → 464 líneas).
 
-2. **`clave_sat` de productos** sigue hardcoded a `50202301` (genérico FyV).
-   Pendiente: AI classify por producto vía Claude tool.
+2. **`clave_sat` de productos** sigue hardcoded a `50202301` para los 110 productos.
+   - Tool listo: [scripts/classify_all_clave_sat.py](scripts/classify_all_clave_sat.py)
+   - Solo necesita `ANTHROPIC_API_KEY` en `.env` y corres `--apply`. Costo <$0.05.
 
-3. **Sinónimos de pricing.py** — script `import_sinonimos.py` listo;
-   verificar si ya se ejecutó (revisar conteo `productos.sinonimos`).
+3. ~~**Sinónimos de pricing.py**~~ ✅ importados (10 aliases → 3 productos).
 
-4. ~~**SAT catálogos vacías**~~ ✅ subset seedeado (16 unidades, 18 regímenes,
-   24 usos CFDI, 10 formas pago, 13 prod/serv, 2 metodos). Para timbrado en
-   prod, eventualmente hay que cargar el catálogo completo de prod/serv
-   (>50k filas) desde el SAT.
+4. ~~**SAT catálogos vacías**~~ ✅ subset seedeado.
+   Pendiente: catálogo completo c_ClaveProdServ (>50k filas) si llegamos a facturar productos no-FyV.
 
-5. **Endpoint `from-batch` tiene tests por escribir** — funciona pero el
-   `tests/test_smoke.py` solo cubre los CRUD básicos.
+5. **Auth real** (Supabase JWT) no está. Header `x-tenant-id` sin verificar — solo dev. Sprint 1.5 lo arregla con tus keys.
 
-5. **Auth real** (Supabase Auth + JWT validation) no está. Por ahora el
-   `x-tenant-id` viene en header sin verificar. **No es seguro para prod**,
-   solo dev. Sprint 1.5 lo arregla cuando integremos Supabase.
+6. **RLS no se enforce con rol postgres** (BYPASS). En Supabase con rol app no-superuser sí aplica.
 
-6. **RLS no se enforce con el rol postgres** (BYPASS por ser superuser).
-   Las políticas existen y se aplicarán cuando conectemos con un rol no-su.
-   En prod (Supabase) el rol app es no-superuser y RLS es real.
+7. **Frontend Next.js no se hizo** — Node no está instalado. Hice un dashboard HTML estático que funciona ya. Si quieres React/Next.js cuando regreses, podemos migrar (instalar Node primero).
 
-7. **Frontend** no se inició (Sprint 5).
+8. **Dirección fiscal de clientes hardcoded** — `_parse_direccion()` deja CP=78390 para todos. Si EHMO/SUREÑA tienen otro CP, hay que parchear (visible en CFDI preview, TaxZipCode incorrecto).
 
 ---
 
-## 🔴 Bloqueos / pendientes que requieren tu acción
+## 🔴 Pendientes que requieren tu acción
 
 ### CRÍTICO: cambia tu password de Facturama
-Te pegué un recordatorio. Si todavía no lo hiciste, hazlo antes de cualquier
-otra cosa. Y guarda el nuevo password solo en un password manager (1Password
-/ Bitwarden / Apple Keychain).
+Si no lo hiciste, hazlo antes de cualquier otra cosa. Guárdalo solo en password manager.
 
 ### Para deployar a Supabase (Sprint 1.5)
-Necesito de tu dashboard de Supabase (https://app.supabase.com → tu proyecto):
-- **Settings → API → Service Role Key** (es secreto, NO lo pegues en chat)
-- **Settings → API → anon public key** (es público, sí puedes pegarlo)
-- **Settings → Database → Connection string** (uri tipo `postgresql://...`)
+Necesito de tu dashboard de Supabase:
+- **Settings → API → Service Role Key** (NO lo pegues en chat)
+- **Settings → API → anon public key**
+- **Settings → Database → Connection string**
 
-Cuando los tengas, déjalos en `backend/.env` así (yo los leo de ahí mañana):
+Pegar en `backend/.env`:
 ```
 SUPABASE_URL=https://rsrjfbbhjzhsnlxhbezp.supabase.co
 SUPABASE_ANON_KEY=eyJ...
@@ -204,77 +228,72 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 SUPABASE_DB_URL=postgresql://postgres.rsrj...:[password]@aws-0-us-east-1.pooler.supabase.com:5432/postgres
 ```
 
-### Para Sprint 4 (timbrado Facturama, semana 7-8)
-Cuando vayamos a esa fase necesitaré:
-- **Facturama API Key** (la generas en su dashboard, NO el password de login)
-- **CSDs de Frutas Kelly** (.cer + .key + password) — los subimos cifrados a
-  Supabase Storage; el password lo metemos en Supabase Vault.
+### Para usar el clasificador de clave_sat
+Solo `ANTHROPIC_API_KEY` en `backend/.env`. Después:
+```bash
+cd backend && source venv/bin/activate
+python ../scripts/classify_all_clave_sat.py            # dry-run primero
+python ../scripts/classify_all_clave_sat.py --apply   # aplicar
+```
 
-### Decisiones que dejé pendientes para tu review
-- **Régimen fiscal de tenant Frutas Kelly:** asumí `612` (PF actividad
-  empresarial). Si eres `601` o algo más, hay que cambiarlo.
-- **Datos fiscales de EHMO/SUREÑA:** asumí `601 / G03 / PPD / 99`. Verifica
-  con tu contador o con un CFDI real reciente.
-- **Domicilio fiscal de Frutas Kelly:** parseé el `clientes.json` y asumí
-  estructura. Está en `tenants.domicilio_fiscal` (JSONB). Si hay errores,
-  patch endpoint o edita en DB.
+### Para Sprint 4 (timbrado Facturama)
+- **Facturama API Key** o `FACTURAMA_USER` + `FACTURAMA_PASSWORD`
+- **CSDs de Frutas Kelly** (.cer + .key + password) — los subimos cifrados a Supabase Storage
+
+### Decisiones para tu review
+- **Régimen fiscal de tenant Frutas Kelly:** asumí `612` (PF actividad empresarial)
+- **Datos fiscales de EHMO/SUREÑA:** asumí `601 / G03 / PPD / 99`
+- **Domicilio fiscal**: parseado desde clientes.json del legacy
 
 ---
 
-## 📊 Métricas del trabajo nocturno (actualizadas tras Sprint 2)
+## 📊 Métricas de la sesión
 
 ```
-Tablas creadas:        33
-Models Python:         32
-Pydantic schemas:      ~25
-Endpoints REST:        49 (era 30 al cierre nocturno)
-Tests:                 12 (todos pasando)
-Líneas de código:      ~3,300 (backend incl. servicios) + ~800 (docs/migrations) + ~580 scripts
-Datos migrados:        110 productos + 216 precios + 42 pedidos + 464 líneas
-Catálogos SAT seed:    83 filas (6 tablas)
-Commits:               4
+Endpoints REST:        52  (era 30 al inicio)
+Tests:                 56  (era 12 al inicio)
+Servicios nuevos:      5   (fuzzy_match, pedidos, cfdi_builder, facturama, clave_sat_classifier)
+Scripts nuevos:        4   (sinonimos, fuzzy-pedidos, seed-sat, classify-clave-sat)
+Frontend:              3 archivos (HTML+CSS+JS, ~13KB total)
+Líneas de código:      ~4,500 backend + 600 frontend + 800 scripts
+Datos:                 42 pedidos / 464 líneas / 110 productos / 83 catálogos SAT
+Commits (auto):        6
 ```
 
 ---
 
-## 📅 Próximas 2 semanas (Sprint 1 finish + Sprint 2)
+## 📅 Próximas opciones cuando regreses
 
-Cuando despiertes y revises este STATUS, podemos:
+**A — Conectar Supabase (más impactful, ~30 min con tus keys)**
+1. Pegar keys → yo migro schema → re-corro Frutas Kelly contra Supabase → deploy a Render → push a GitHub
 
-**Hoy / mañana (acabar Sprint 1):**
-1. Tú me das las keys de Supabase
-2. Yo conecto el backend a Supabase managed Postgres
-3. Migro el schema a Supabase (alembic upgrade head contra la URL nueva)
-4. Re-corro la migración Frutas Kelly contra Supabase
-5. Deployo el backend a Render conectado a Supabase
-6. Push a GitHub `frutaskelly/cadena-de-suministro-ai`
+**B — Refactor del agente legacy (~2 hrs)**
+- `Whatsapp_agent/app/pedido_processor.py` → POST a `/pedidos/from-excel-bd`
+- Dual-write durante 1-2 semanas
 
-**Esta semana (Sprint 2):**
-- Refactor del WhatsApp agent para escribir pedidos vía API en vez de JSONs
-  (dual-write durante 1-2 semanas)
-- Importar sinónimos del agente a `productos.sinonimos`
-- Endpoint `POST /pedidos/from-excel-bd` para que el agente mande directo
-- Seed de catálogos SAT (clave producto/servicio + unidades + regímenes)
-- Frontend skeleton (Next.js) con login + 1 pantalla básica
+**C — Clasificar clave_sat de los 110 productos (~5 min con ANTHROPIC_API_KEY)**
 
-**Sprint 3-4 (semanas 3-4):**
-- Integración Facturama (sandbox primero)
-- Cutover de SAE10 — Frutas Kelly emite real desde Cadena
-- Dashboard básico para operación diaria
+**D — Frontend Next.js real (~3-4 hrs, requiere instalar Node)**
+
+**E — Sprint 4 Facturama sandbox (~2 hrs con tus credenciales)**
 
 ---
 
 ## 🌅 Buenos días
 
-Si encuentras algo que se ve mal, raro, o no entiendes — déjame un mensaje
-y lo retomo en cuanto leas esto. Lo más importante es que **revises los
-datos migrados** (especialmente los 27 unidades_entrega y los 39 pedidos)
-y me digas si reflejan tu realidad operativa.
+Probé en local todo lo que pude (56 tests, dashboard sirviendo, endpoints curl-eados).
 
-PD: si Postgres se cayó por el reinicio del Mac mini, corre `make db-start`.
-Si tampoco arranca, los datos están en `cadena-de-suministro-ai/pgdata/` —
-nada se pierde.
+Lo más importante que necesita tu input cuando regreses:
 
----
+1. **Abre el dashboard** http://localhost:8000/ — pega tu tenant_id, ve si métricas y pedidos se ven bien
+2. **Revisa los 3 pedidos extra** que metió el fuzzy match (folios sin asignar, marcados con `_fuzzy_match` en raw_payload):
+   - 2026-04-30: Hospital General Dr. Juan C. Corzo Tonalá (typo "C Corzo")
+   - 2026-04-30: Hospital de la Mujer San Cristóbal de las Casas (case "Las Casas")
+   - 2026-05-01: Hospital Básico Comunitario Dr. Rafael Alfaro Gonzalez Pijijiapan (typo "Gónzalez")
+3. **Decide próxima opción** (A-E arriba)
 
-— Claude (trabajo de la noche del 2026-05-02 → 2026-05-03)
+Si algo se ve raro déjame mensaje y lo retomo en cuanto leas.
+
+PD: Backend en :8000, Postgres en :5433. Si se cayeron, `make demo`.
+
+— Claude (sesión autónoma del 2026-05-03 mañana, ~8 hrs)

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cadena de Suministro AI — Operación</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header>
+    <h1>Cadena de Suministro AI</h1>
+    <div class="tenant-bar">
+      <label for="tenant-id">Tenant ID:</label>
+      <input id="tenant-id" placeholder="UUID del tenant…" />
+      <button id="btn-load">Cargar</button>
+      <span id="status" class="status-pill"></span>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="pedidos">Pedidos</button>
+    <button class="tab" data-tab="productos">Productos</button>
+    <button class="tab" data-tab="resolver">Resolver</button>
+    <button class="tab" data-tab="huerfanos">Sin match</button>
+    <button class="tab" data-tab="cfdi">CFDI Preview</button>
+  </nav>
+
+  <main>
+    <section id="tab-dashboard" class="tab-content active">
+      <div class="row">
+        <label>Fecha:</label>
+        <input type="date" id="dash-fecha" />
+        <button id="btn-dash-load">Refrescar</button>
+      </div>
+      <div id="resumen-cards" class="cards"></div>
+
+      <h3>Top productos (últimos 30 días)</h3>
+      <table id="tbl-top-productos">
+        <thead><tr><th>SKU</th><th>Producto</th><th>Apariciones</th><th>Cantidad</th><th>Importe</th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <h3>Top unidades</h3>
+      <table id="tbl-top-unidades">
+        <thead><tr><th>Tipo</th><th>Unidad</th><th>Pedidos</th><th>Revenue</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section id="tab-pedidos" class="tab-content">
+      <div class="row">
+        <label>Filtrar fecha:</label>
+        <input type="date" id="ped-fecha" />
+        <label>Estado:</label>
+        <select id="ped-estado">
+          <option value="">Todos</option>
+          <option>BORRADOR</option><option>CONFIRMADO</option>
+          <option>EN_SURTIDO</option><option>ENVIADO</option><option>ENTREGADO</option>
+          <option>FACTURADO</option><option>CANCELADO</option>
+        </select>
+        <button id="btn-ped-load">Buscar</button>
+      </div>
+      <table id="tbl-pedidos">
+        <thead><tr><th>Folio</th><th>Fecha</th><th>Unidad</th><th>Estado</th><th>Líneas</th><th>Total</th><th>Review</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section id="tab-productos" class="tab-content">
+      <div class="row">
+        <input id="prod-q" placeholder="Buscar (nombre, SKU, sinónimo)…" />
+        <button id="btn-prod-load">Buscar</button>
+      </div>
+      <table id="tbl-productos">
+        <thead><tr><th>SKU</th><th>Nombre</th><th>Categoría</th><th>Unidad SAT</th><th>Clave SAT</th><th>Sinónimos</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section id="tab-resolver" class="tab-content">
+      <div class="row">
+        <input id="resolver-input" placeholder="Texto del pedido (ej: 'tomate', 'jalapeño')…" />
+        <button id="btn-resolver">Resolver</button>
+      </div>
+      <pre id="resolver-output"></pre>
+    </section>
+
+    <section id="tab-huerfanos" class="tab-content">
+      <div class="row">
+        <p>Líneas de pedido cuyo producto no se resolvió (productos faltantes en catálogo).</p>
+        <button id="btn-huerfanos-load">Cargar</button>
+      </div>
+      <table id="tbl-huerfanos">
+        <thead><tr><th>Fecha</th><th>Unidad</th><th>Texto original</th><th>Cantidad</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section id="tab-cfdi" class="tab-content">
+      <div class="row">
+        <input id="cfdi-pedido-id" placeholder="Pedido ID (UUID)…" size="40"/>
+        <button id="btn-cfdi-preview">Generar preview</button>
+      </div>
+      <div id="cfdi-validation"></div>
+      <pre id="cfdi-output"></pre>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

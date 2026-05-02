@@ -12,6 +12,10 @@ from ...schemas import (
     ListaPreciosCreate, ListaPreciosOut, PrecioCreate, PrecioOut,
 )
 from ...services.pedidos import _resolve_producto, _resolve_precio
+from ...services.clave_sat_classifier import (
+    ClaveSatClassifier, ClassifierError, ClassifierConfigError,
+)
+from ...core.config import settings
 
 router = APIRouter(prefix="/productos", tags=["productos"])
 
@@ -151,6 +155,55 @@ def update_producto(
     db.commit()
     db.refresh(p)
     return p
+
+
+@router.post("/{producto_id}/classify-clave-sat")
+def classify_clave_sat(
+    producto_id: UUID,
+    apply: bool = Query(False, description="Si true, también persiste el resultado en producto.clave_sat"),
+    db: Session = Depends(get_db_session),
+    tenant_id: UUID = Depends(require_tenant),
+):
+    """Clasifica el producto con Claude (subset c_ClaveProdServ FyV).
+
+    Si `apply=true`, persiste la nueva clave_sat en el producto.
+    """
+    p = db.query(Producto).filter(
+        Producto.id == producto_id,
+        Producto.tenant_id == tenant_id,
+    ).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+
+    classifier = ClaveSatClassifier(api_key=settings.ANTHROPIC_API_KEY)
+    if not classifier.configured:
+        raise HTTPException(
+            status_code=503,
+            detail="ANTHROPIC_API_KEY no configurada en .env",
+        )
+    try:
+        result = classifier.classify(
+            nombre=p.nombre,
+            descripcion=p.descripcion,
+            categoria=p.categoria,
+        )
+    except (ClassifierError, ClassifierConfigError) as e:
+        raise HTTPException(status_code=502, detail=f"Classifier error: {e}")
+
+    out = {
+        "producto_id": str(p.id),
+        "current_clave_sat": p.clave_sat,
+        "suggested_clave_sat": result.clave,
+        "suggested_descripcion": result.descripcion,
+        "confidence": result.confidence,
+        "rationale": result.rationale,
+        "applied": False,
+    }
+    if apply:
+        p.clave_sat = result.clave
+        db.commit()
+        out["applied"] = True
+    return out
 
 
 # ─── Listas de precios ──────────────────────────────────────────────────────

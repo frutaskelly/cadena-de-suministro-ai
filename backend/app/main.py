@@ -1,10 +1,16 @@
 """Cadena de Suministro AI — FastAPI entry point."""
 import logging
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from .core.config import settings
 from .api.v1 import tenants, clientes, productos, contratos, pedidos, sat, dashboard
+
+FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 
 logging.basicConfig(level=getattr(logging, settings.LOG_LEVEL))
 log = logging.getLogger(__name__)
@@ -29,13 +35,26 @@ def health():
     return {"status": "ok", "version": app.version, "env": settings.ENVIRONMENT}
 
 
-@app.get("/")
-def root():
+@app.get("/api")
+def api_root():
     return {
         "service": "cadena-de-suministro-ai",
         "docs": "/docs",
         "health": "/health",
     }
+
+
+# ─── Frontend estático (operator dashboard) ────────────────────────────────
+if FRONTEND_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+
+    @app.get("/")
+    def frontend_index():
+        return FileResponse(str(FRONTEND_DIR / "index.html"))
+else:
+    @app.get("/")
+    def root():
+        return {"service": "cadena-de-suministro-ai", "docs": "/docs"}
 
 
 # ─── API v1 routers ─────────────────────────────────────────────────────────

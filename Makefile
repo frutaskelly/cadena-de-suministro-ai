@@ -1,18 +1,22 @@
 # Cadena de Suministro AI — comandos útiles para desarrollo local
 
-.PHONY: help db-start db-stop db-status db-reset migrate seed run test demo
+.PHONY: help db-start db-stop db-status db-reset migrate seed seed-all seed-sat sinonimos fuzzy-pedidos run test demo
 
 help:
 	@echo "Comandos disponibles:"
-	@echo "  make db-start   - Arranca Postgres local en :5433"
-	@echo "  make db-stop    - Apaga Postgres local"
-	@echo "  make db-status  - Estado de Postgres local"
-	@echo "  make db-reset   - Borra y recrea la base (¡destructivo!)"
-	@echo "  make migrate    - Aplica migraciones Alembic"
-	@echo "  make seed       - Migra datos de Frutas Kelly al backend"
-	@echo "  make run        - Arranca backend FastAPI en :8000"
-	@echo "  make test       - Corre tests pytest"
-	@echo "  make demo       - Pipeline completo: db + migrate + seed + tests"
+	@echo "  make db-start       - Arranca Postgres local en :5433"
+	@echo "  make db-stop        - Apaga Postgres local"
+	@echo "  make db-status      - Estado de Postgres local"
+	@echo "  make db-reset       - Borra y recrea la base (¡destructivo!)"
+	@echo "  make migrate        - Aplica migraciones Alembic"
+	@echo "  make seed           - Migra datos de Frutas Kelly al backend"
+	@echo "  make seed-sat       - Seed de catálogos SAT (regimenes, usos CFDI, etc.)"
+	@echo "  make sinonimos      - Importa sinónimos del agente legacy"
+	@echo "  make fuzzy-pedidos  - Re-procesa pedidos sin matchear con fuzzy"
+	@echo "  make seed-all       - seed + seed-sat + sinonimos + fuzzy-pedidos"
+	@echo "  make run            - Arranca backend FastAPI en :8000"
+	@echo "  make test           - Corre tests pytest"
+	@echo "  make demo           - Pipeline completo: db + migrate + seed-all + tests"
 
 PG_BIN := /opt/homebrew/opt/postgresql@16/bin
 PG_DATA := pgdata
@@ -40,14 +44,26 @@ migrate:
 seed:
 	@cd backend && . venv/bin/activate && python ../scripts/migrate_frutas_kelly.py
 
+seed-sat:
+	@cd backend && . venv/bin/activate && python ../scripts/seed_sat_catalogs.py
+
+sinonimos:
+	@cd backend && . venv/bin/activate && python ../scripts/import_sinonimos.py
+
+fuzzy-pedidos:
+	@cd backend && . venv/bin/activate && python ../scripts/match_unmatched_pedidos.py
+
+seed-all: seed seed-sat sinonimos fuzzy-pedidos
+
 run:
 	@cd backend && . venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 test:
 	@cd backend && . venv/bin/activate && pytest tests/ -v
 
-demo: db-start migrate seed test
+demo: db-start migrate seed-all test
 	@echo ""
 	@echo "✅ Demo lista. Ahora:"
-	@echo "  - make run            # arranca backend"
-	@echo "  - http://localhost:8000/docs   # API interactiva"
+	@echo "  - make run                       # arranca backend"
+	@echo "  - http://localhost:8000/         # operator dashboard"
+	@echo "  - http://localhost:8000/docs     # API interactiva"

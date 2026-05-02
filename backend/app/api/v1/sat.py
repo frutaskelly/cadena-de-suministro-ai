@@ -30,7 +30,7 @@ def list_metodos_pago(db: Session = Depends(get_db_session)):
 
 @router.get("/regimenes")
 def list_regimenes(
-    aplica: Optional[str] = Query(None, regex="^(fisica|moral)$"),
+    aplica: Optional[str] = Query(None, pattern="^(fisica|moral)$"),
     db: Session = Depends(get_db_session),
 ):
     q = db.query(SatRegimenFiscal)
@@ -52,7 +52,7 @@ def list_regimenes(
 
 @router.get("/usos-cfdi")
 def list_usos_cfdi(
-    aplica: Optional[str] = Query(None, regex="^(fisica|moral)$"),
+    aplica: Optional[str] = Query(None, pattern="^(fisica|moral)$"),
     db: Session = Depends(get_db_session),
 ):
     q = db.query(SatUsoCfdi)
