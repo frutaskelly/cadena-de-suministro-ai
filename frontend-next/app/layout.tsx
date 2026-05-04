@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import { TenantProvider } from "@/components/TenantProvider";
+import DevRoutePill from "@/components/DevRoutePill";
 
 export const metadata: Metadata = {
   title: "Cadena de Suministro AI",
@@ -19,6 +20,7 @@ export default function RootLayout({
         <TenantProvider>
           <Sidebar />
           <div className="ml-60 min-h-screen">{children}</div>
+          <DevRoutePill />
         </TenantProvider>
       </body>
     </html>
