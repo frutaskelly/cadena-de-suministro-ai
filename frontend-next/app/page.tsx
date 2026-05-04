@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Topbar from "@/components/Topbar";
+import { useTenant } from "@/components/TenantProvider";
 import {
   Card,
   StatCard,
@@ -11,7 +12,7 @@ import {
   ErrorBox,
   Badge,
 } from "@/components/ui";
-import { api, fmtMoney, fmtNumber, getTenantId } from "@/lib/api";
+import { api, fmtMoney, fmtNumber } from "@/lib/api";
 import type {
   DashboardResumen,
   TopProductos,
@@ -19,7 +20,7 @@ import type {
 } from "@/lib/types";
 
 export default function DashboardPage() {
-  const [tenant, setTenant] = useState<string | null>(null);
+  const { tenant } = useTenant();
   const [resumen, setResumen] = useState<DashboardResumen | null>(null);
   const [topProds, setTopProds] = useState<TopProductos | null>(null);
   const [topUnits, setTopUnits] = useState<TopUnidades | null>(null);
@@ -28,12 +29,6 @@ export default function DashboardPage() {
   const [fecha, setFecha] = useState(() =>
     new Date().toISOString().slice(0, 10)
   );
-
-  useEffect(() => {
-    setTenant(getTenantId());
-    const id = setInterval(() => setTenant(getTenantId()), 1000);
-    return () => clearInterval(id);
-  }, []);
 
   useEffect(() => {
     if (!tenant) return;

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Topbar from "@/components/Topbar";
+import { useTenant } from "@/components/TenantProvider";
 import {
   Card,
   PageHeader,
@@ -11,7 +12,7 @@ import {
   Badge,
   StatCard,
 } from "@/components/ui";
-import { api, fmtMoney, fmtDate, getTenantId } from "@/lib/api";
+import { api, fmtMoney, fmtDate } from "@/lib/api";
 import type { Remision } from "@/lib/types";
 
 const ESTADOS = [
@@ -24,18 +25,12 @@ const ESTADOS = [
 ];
 
 export default function RemisionesPage() {
-  const [tenant, setTenant] = useState<string | null>(null);
+  const { tenant } = useTenant();
   const [remisiones, setRemisiones] = useState<Remision[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [estadoFilter, setEstadoFilter] = useState<string>("");
   const [transitioning, setTransitioning] = useState<string | null>(null);
-
-  useEffect(() => {
-    setTenant(getTenantId());
-    const id = setInterval(() => setTenant(getTenantId()), 1000);
-    return () => clearInterval(id);
-  }, []);
 
   async function load() {
     setLoading(true);

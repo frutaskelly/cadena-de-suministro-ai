@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
+import { TenantProvider } from "@/components/TenantProvider";
 
 export const metadata: Metadata = {
   title: "Cadena de Suministro AI",
@@ -15,8 +16,10 @@ export default function RootLayout({
   return (
     <html lang="es" className="h-full antialiased">
       <body className="min-h-full">
-        <Sidebar />
-        <div className="ml-60 min-h-screen">{children}</div>
+        <TenantProvider>
+          <Sidebar />
+          <div className="ml-60 min-h-screen">{children}</div>
+        </TenantProvider>
       </body>
     </html>
   );

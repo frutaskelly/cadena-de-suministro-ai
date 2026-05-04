@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Topbar from "@/components/Topbar";
+import { useTenant } from "@/components/TenantProvider";
 import {
   Card,
   PageHeader,
@@ -10,23 +11,17 @@ import {
   ErrorBox,
   Badge,
 } from "@/components/ui";
-import { api, fmtMoney, fmtDate, getTenantId } from "@/lib/api";
+import { api, fmtMoney, fmtDate } from "@/lib/api";
 import type { Pedido } from "@/lib/types";
 
 export default function PedidosPage() {
-  const [tenant, setTenant] = useState<string | null>(null);
+  const { tenant } = useTenant();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fechaDesde, setFechaDesde] = useState("2026-04-25");
   const [fechaHasta, setFechaHasta] = useState("2026-05-04");
   const [estadoFilter, setEstadoFilter] = useState<string>("");
-
-  useEffect(() => {
-    setTenant(getTenantId());
-    const id = setInterval(() => setTenant(getTenantId()), 1000);
-    return () => clearInterval(id);
-  }, []);
 
   useEffect(() => {
     if (!tenant) return;

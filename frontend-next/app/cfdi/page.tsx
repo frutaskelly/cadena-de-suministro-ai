@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import Topbar from "@/components/Topbar";
+import { useTenant } from "@/components/TenantProvider";
 import { Card, PageHeader, NoTenant, ErrorBox } from "@/components/ui";
-import { api, getTenantId } from "@/lib/api";
+import { api } from "@/lib/api";
 
 export default function CFDIPage() {
-  const [tenant] = useState<string | null>(getTenantId());
+  const { tenant } = useTenant();
   const [pedidoId, setPedidoId] = useState("");
   const [data, setData] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);

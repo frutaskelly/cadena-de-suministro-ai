@@ -1,30 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getTenantId, setTenantId, clearTenantId } from "@/lib/api";
+import { useState } from "react";
+import { useTenant } from "@/components/TenantProvider";
 
 export default function Topbar({ title }: { title: string }) {
-  const [tenant, setTenant] = useState<string | null>(null);
+  const { tenant, setTenant, clear, ready } = useTenant();
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-
-  useEffect(() => {
-    const t = getTenantId();
-    setTenant(t);
-    if (t) setDraft(t);
-  }, []);
+  const [draft, setDraft] = useState(tenant ?? "");
 
   function save() {
     if (!draft.trim()) return;
-    setTenantId(draft.trim());
     setTenant(draft.trim());
     setEditing(false);
   }
 
-  function clear() {
-    clearTenantId();
-    setTenant(null);
-    setDraft("");
+  function startEdit() {
+    setDraft(tenant ?? "");
     setEditing(true);
   }
 
@@ -43,7 +34,11 @@ export default function Topbar({ title }: { title: string }) {
             <>
               <input
                 className="input"
-                style={{ width: 320, fontFamily: "ui-monospace, monospace", fontSize: 12 }}
+                style={{
+                  width: 320,
+                  fontFamily: "ui-monospace, monospace",
+                  fontSize: 12,
+                }}
                 placeholder="tenant_id (UUID)"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
@@ -51,8 +46,13 @@ export default function Topbar({ title }: { title: string }) {
                   if (e.key === "Enter") save();
                 }}
                 autoFocus
+                aria-label="UUID del tenant"
               />
-              <button className="btn-primary" onClick={save}>
+              <button
+                className="btn-primary"
+                onClick={save}
+                disabled={!draft.trim() || !ready}
+              >
                 Guardar
               </button>
               {tenant && (
@@ -67,6 +67,7 @@ export default function Topbar({ title }: { title: string }) {
                 <span
                   className="w-1.5 h-1.5 rounded-full"
                   style={{ background: "#34c759" }}
+                  aria-hidden="true"
                 />
                 <span
                   className="font-mono text-[11px]"
@@ -75,7 +76,7 @@ export default function Topbar({ title }: { title: string }) {
                   {tenant.slice(0, 8)}…{tenant.slice(-4)}
                 </span>
               </div>
-              <button className="btn-ghost" onClick={() => setEditing(true)}>
+              <button className="btn-ghost" onClick={startEdit}>
                 Cambiar
               </button>
               <button className="btn-ghost" onClick={clear}>

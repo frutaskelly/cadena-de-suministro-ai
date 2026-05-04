@@ -6,12 +6,18 @@ export function Card({
   children,
   className = "",
   padding = "p-6",
+  onClick,
 }: {
   children: ReactNode;
   className?: string;
   padding?: string;
+  onClick?: () => void;
 }) {
-  return <div className={`card ${padding} ${className}`}>{children}</div>;
+  return (
+    <div className={`card ${padding} ${className}`} onClick={onClick}>
+      {children}
+    </div>
+  );
 }
 
 export function StatCard({

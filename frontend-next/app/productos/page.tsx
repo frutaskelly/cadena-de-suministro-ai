@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Topbar from "@/components/Topbar";
+import { useTenant } from "@/components/TenantProvider";
 import {
   Card,
   PageHeader,
@@ -11,7 +12,7 @@ import {
   Badge,
   StatCard,
 } from "@/components/ui";
-import { api, fmtNumber, getTenantId } from "@/lib/api";
+import { api, fmtNumber } from "@/lib/api";
 import type { Producto } from "@/lib/types";
 
 const CATEGORIAS = [
@@ -30,19 +31,13 @@ const CATEGORIAS = [
 ];
 
 export default function ProductosPage() {
-  const [tenant, setTenant] = useState<string | null>(null);
+  const { tenant } = useTenant();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [categoriaFilter, setCategoriaFilter] = useState("");
   const [esCatFilter, setEsCatFilter] = useState<string>("");
-
-  useEffect(() => {
-    setTenant(getTenantId());
-    const id = setInterval(() => setTenant(getTenantId()), 1000);
-    return () => clearInterval(id);
-  }, []);
 
   useEffect(() => {
     if (!tenant) return;

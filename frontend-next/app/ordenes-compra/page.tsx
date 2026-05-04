@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Topbar from "@/components/Topbar";
+import { useTenant } from "@/components/TenantProvider";
 import {
   Card,
   PageHeader,
@@ -11,7 +12,7 @@ import {
   Badge,
   StatCard,
 } from "@/components/ui";
-import { api, fmtMoney, fmtDate, getTenantId } from "@/lib/api";
+import { api, fmtMoney, fmtDate } from "@/lib/api";
 import type { OrdenCompra } from "@/lib/types";
 
 const ESTADOS = [
@@ -25,17 +26,11 @@ const ESTADOS = [
 ];
 
 export default function OrdenesCompraPage() {
-  const [tenant, setTenant] = useState<string | null>(null);
+  const { tenant } = useTenant();
   const [ordenes, setOrdenes] = useState<OrdenCompra[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [estadoFilter, setEstadoFilter] = useState("");
-
-  useEffect(() => {
-    setTenant(getTenantId());
-    const id = setInterval(() => setTenant(getTenantId()), 1000);
-    return () => clearInterval(id);
-  }, []);
 
   useEffect(() => {
     if (!tenant) return;

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Topbar from "@/components/Topbar";
+import { useTenant } from "@/components/TenantProvider";
 import {
   Card,
   PageHeader,
@@ -10,21 +11,15 @@ import {
   ErrorBox,
   Badge,
 } from "@/components/ui";
-import { api, fmtNumber, getTenantId } from "@/lib/api";
+import { api, fmtNumber } from "@/lib/api";
 import type { Conversion, Producto } from "@/lib/types";
 
 export default function ConversionesPage() {
-  const [tenant, setTenant] = useState<string | null>(null);
+  const { tenant } = useTenant();
   const [convs, setConvs] = useState<Conversion[]>([]);
   const [productos, setProductos] = useState<Map<string, Producto>>(new Map());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setTenant(getTenantId());
-    const id = setInterval(() => setTenant(getTenantId()), 1000);
-    return () => clearInterval(id);
-  }, []);
 
   useEffect(() => {
     if (!tenant) return;

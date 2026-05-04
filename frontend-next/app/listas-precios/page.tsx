@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Topbar from "@/components/Topbar";
+import { useTenant } from "@/components/TenantProvider";
 import {
   Card,
   PageHeader,
@@ -11,23 +12,17 @@ import {
   Badge,
   StatCard,
 } from "@/components/ui";
-import { api, fmtMoney, fmtDate, getTenantId } from "@/lib/api";
+import { api, fmtMoney, fmtDate } from "@/lib/api";
 import type { ListaPrecios, Precio, Producto } from "@/lib/types";
 
 export default function ListasPreciosPage() {
-  const [tenant, setTenant] = useState<string | null>(null);
+  const { tenant } = useTenant();
   const [listas, setListas] = useState<ListaPrecios[]>([]);
   const [precios, setPrecios] = useState<Precio[]>([]);
   const [productos, setProductos] = useState<Map<string, Producto>>(new Map());
   const [selectedLista, setSelectedLista] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setTenant(getTenantId());
-    const id = setInterval(() => setTenant(getTenantId()), 1000);
-    return () => clearInterval(id);
-  }, []);
 
   useEffect(() => {
     if (!tenant) return;

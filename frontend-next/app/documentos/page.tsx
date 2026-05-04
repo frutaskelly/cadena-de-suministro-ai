@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Topbar from "@/components/Topbar";
+import { useTenant } from "@/components/TenantProvider";
 import {
   Card,
   PageHeader,
@@ -11,7 +12,7 @@ import {
   Badge,
   StatCard,
 } from "@/components/ui";
-import { api, fmtDate, fmtDateTime, getTenantId } from "@/lib/api";
+import { api, fmtDate, fmtDateTime } from "@/lib/api";
 import type { DocumentoGenerado } from "@/lib/types";
 
 const TIPOS = [
@@ -33,17 +34,11 @@ const TIPO_LABEL: Record<string, string> = {
 };
 
 export default function DocumentosPage() {
-  const [tenant, setTenant] = useState<string | null>(null);
+  const { tenant } = useTenant();
   const [docs, setDocs] = useState<DocumentoGenerado[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tipoFilter, setTipoFilter] = useState("");
-
-  useEffect(() => {
-    setTenant(getTenantId());
-    const id = setInterval(() => setTenant(getTenantId()), 1000);
-    return () => clearInterval(id);
-  }, []);
 
   useEffect(() => {
     if (!tenant) return;
