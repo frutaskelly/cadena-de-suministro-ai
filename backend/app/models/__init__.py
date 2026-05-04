@@ -14,6 +14,7 @@ from .proveedor import Proveedor, OrdenCompra, LineaOrdenCompra
 from .remision import Remision, LineaRemision, AjusteRemision
 from .conversion import ConversionProducto
 from .whatsapp import AgenteWhatsapp, DocumentoGenerado
+from .chat import ChatConversacion, ChatMensaje
 from .log import EventLog, MensajeLog
 
 __all__ = [
@@ -30,5 +31,6 @@ __all__ = [
     "Remision", "LineaRemision", "AjusteRemision",
     "ConversionProducto",
     "AgenteWhatsapp", "DocumentoGenerado",
+    "ChatConversacion", "ChatMensaje",
     "EventLog", "MensajeLog",
 ]

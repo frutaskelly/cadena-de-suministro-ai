@@ -22,6 +22,10 @@ from .orden_compra import (
 )
 from .conversion import ConversionCreate, ConversionUpdate, ConversionOut
 from .whatsapp import AgenteWhatsappOut, DocumentoGeneradoOut
+from .chat import (
+    ChatAttachmentIn, ChatMensajeIn, ChatMensajeOut,
+    ChatConversacionCreate, ChatConversacionOut, ChatConversacionDetail,
+)
 
 __all__ = [
     "TenantCreate", "TenantOut", "UserCreate", "UserOut", "MembershipCreate", "MembershipOut",
@@ -40,4 +44,6 @@ __all__ = [
     "LineaOrdenCompraCreate", "LineaOrdenCompraOut",
     "ConversionCreate", "ConversionUpdate", "ConversionOut",
     "AgenteWhatsappOut", "DocumentoGeneradoOut",
+    "ChatAttachmentIn", "ChatMensajeIn", "ChatMensajeOut",
+    "ChatConversacionCreate", "ChatConversacionOut", "ChatConversacionDetail",
 ]

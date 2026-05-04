@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from .core.config import settings
 from .api.v1 import (
     tenants, clientes, productos, contratos, pedidos, sat, dashboard,
-    remisiones, ordenes_compra, conversiones, whatsapp,
+    remisiones, ordenes_compra, conversiones, whatsapp, chat,
 )
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
@@ -96,3 +96,4 @@ app.include_router(ordenes_compra.router, prefix="/api/v1")
 app.include_router(conversiones.router, prefix="/api/v1")
 app.include_router(whatsapp.router_agentes, prefix="/api/v1")
 app.include_router(whatsapp.router_docs, prefix="/api/v1")
+app.include_router(chat.router, prefix="/api/v1")
