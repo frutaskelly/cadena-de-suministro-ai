@@ -22,6 +22,18 @@ class Producto(Base, TimestampMixin, SoftDeleteMixin):
     categoria = Column(String(100))
     lote_default = Column(Integer, default=5)
 
+    # Sprint 8: clasificacion extendida
+    categoria_extendida = Column(String(40), nullable=True)
+    # Valores tipicos:
+    # FRUTAS_VERDURAS, LACTEOS_EMBUTIDOS, PROTEINA_ANIMAL, TORTILLAS, PAN,
+    # GRANOS_SEMILLAS, ABARROTE, AGUA, REFRESCO, LIMPIEZA, DESECHABLES, OTRO
+    es_catalogado = Column(Boolean, default=True, nullable=False, server_default="true")
+    perecedero = Column(Boolean, default=False, nullable=False, server_default="false")
+    cold_chain = Column(Boolean, default=False, nullable=False, server_default="false")
+    requiere_lote = Column(Boolean, default=False, nullable=False, server_default="false")
+    requiere_caducidad = Column(Boolean, default=False, nullable=False, server_default="false")
+    vida_util_dias = Column(Integer, nullable=True)
+
     # SAT
     clave_sat = Column(String(8), nullable=False)
     unidad_sat = Column(String(3), nullable=False)

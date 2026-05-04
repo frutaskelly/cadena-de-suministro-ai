@@ -11,6 +11,14 @@ class ProductoBase(BaseModel):
     nombre_normalizado: Optional[str] = None
     descripcion: Optional[str] = None
     categoria: Optional[str] = None
+    # Sprint 8: clasificacion extendida
+    categoria_extendida: Optional[str] = None
+    es_catalogado: bool = True
+    perecedero: bool = False
+    cold_chain: bool = False
+    requiere_lote: bool = False
+    requiere_caducidad: bool = False
+    vida_util_dias: Optional[int] = None
     lote_default: int = 5
     clave_sat: str = "01010101"  # generic placeholder; AI classify later
     unidad_sat: str = "KGM"
@@ -33,6 +41,13 @@ class ProductoUpdate(BaseModel):
     nombre: Optional[str] = None
     descripcion: Optional[str] = None
     categoria: Optional[str] = None
+    categoria_extendida: Optional[str] = None
+    es_catalogado: Optional[bool] = None
+    perecedero: Optional[bool] = None
+    cold_chain: Optional[bool] = None
+    requiere_lote: Optional[bool] = None
+    requiere_caducidad: Optional[bool] = None
+    vida_util_dias: Optional[int] = None
     clave_sat: Optional[str] = None
     unidad_sat: Optional[str] = None
     iva_tasa: Optional[Decimal] = None
