@@ -328,7 +328,9 @@ def procesar_excel_bd(
     result.lineas_sin_match = batch.lineas_sin_match
     result.warnings.extend(batch.warnings)
 
-    if not batch.pedidos_creados:
+    # Siempre generamos PDFs si tenemos rows validos. Aun si los pedidos
+    # ya existian (skipped), regenerar los PDFs es util para el operador.
+    if not rows:
         return result
 
     # ─── 3) Generar PDFs/XLSX desde rows agrupadas ──────────────────
