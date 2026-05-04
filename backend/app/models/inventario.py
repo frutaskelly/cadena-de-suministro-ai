@@ -23,6 +23,13 @@ class Almacen(Base, TimestampMixin):
 
 
 class LoteInventario(Base, TimestampMixin):
+    """Lote de inventario.
+
+    Triple-estado:
+    - cantidad_disponible: fisicamente en bodega disponible para venta
+    - cantidad_reservada: comprometida en remisiones pendientes de facturar
+    - (facturado se calcula via movimientos_inventario tipo SALIDA_FACTURADA)
+    """
     __tablename__ = "lotes_inventario"
 
     id = uuid_pk()
@@ -34,18 +41,42 @@ class LoteInventario(Base, TimestampMixin):
     fecha_caducidad = Column(Date, index=True)
     cantidad_inicial = Column(Numeric(18, 4), nullable=False)
     cantidad_disponible = Column(Numeric(18, 4), nullable=False)
+    cantidad_reservada = Column(Numeric(18, 4), nullable=False, default=0, server_default="0")
     costo_unitario = Column(Numeric(18, 4), nullable=False)
     proveedor_id = Column(UUID(as_uuid=True), ForeignKey("proveedores.id"), nullable=True)
+    orden_compra_id = Column(UUID(as_uuid=True), ForeignKey("ordenes_compra.id"), nullable=True)
     notas = Column(Text)
 
 
 class MovimientoInventario(Base):
+    """Bitacora append-only de cambios de inventario.
+
+    Tipos:
+    - ENTRADA_COMPRA: orden de compra recibida -> aumenta disponible
+    - SALIDA_REMISION: remision generada -> disponible -> reservada
+    - CONFIRMACION_FACTURA: remision facturada -> reservada -> 0 (sale)
+    - CANCELACION_REMISION: remision cancelada -> reservada -> disponible
+    - AJUSTE: correccion manual
+    - MERMA: producto descartado
+    - TRANSFERENCIA: entre almacenes
+    """
     __tablename__ = "movimientos_inventario"
 
     id = uuid_pk()
     tenant_id = tenant_fk()
     tipo = Column(
-        Enum("ENTRADA", "SALIDA", "AJUSTE", "MERMA", "TRANSFERENCIA", name="movimiento_tipo"),
+        Enum(
+            "ENTRADA",                 # legacy: usar ENTRADA_COMPRA preferentemente
+            "SALIDA",                  # legacy
+            "AJUSTE",
+            "MERMA",
+            "TRANSFERENCIA",
+            "ENTRADA_COMPRA",          # Sprint 7: compra recibida
+            "SALIDA_REMISION",         # Sprint 7: remision generada
+            "CONFIRMACION_FACTURA",    # Sprint 7: remision facturada
+            "CANCELACION_REMISION",    # Sprint 7: remision cancelada
+            name="movimiento_tipo",
+        ),
         nullable=False,
     )
     fecha = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

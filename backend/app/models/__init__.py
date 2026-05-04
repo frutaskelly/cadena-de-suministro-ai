@@ -10,7 +10,9 @@ from .producto import Producto, ListaPrecios, Precio
 from .inventario import Almacen, LoteInventario, MovimientoInventario, Merma
 from .pedido import Pedido, LineaPedido
 from .factura import CSD, Factura, LineaFactura, Pago, AbonoFactura
-from .proveedor import Proveedor, OrdenCompra
+from .proveedor import Proveedor, OrdenCompra, LineaOrdenCompra
+from .remision import Remision, LineaRemision, AjusteRemision
+from .conversion import ConversionProducto
 from .log import EventLog, MensajeLog
 
 __all__ = [
@@ -23,6 +25,8 @@ __all__ = [
     "Almacen", "LoteInventario", "MovimientoInventario", "Merma",
     "Pedido", "LineaPedido",
     "CSD", "Factura", "LineaFactura", "Pago", "AbonoFactura",
-    "Proveedor", "OrdenCompra",
+    "Proveedor", "OrdenCompra", "LineaOrdenCompra",
+    "Remision", "LineaRemision", "AjusteRemision",
+    "ConversionProducto",
     "EventLog", "MensajeLog",
 ]
