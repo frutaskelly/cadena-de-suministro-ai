@@ -18,15 +18,29 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 @router.get("/resumen-dia")
 def resumen_dia(
-    fecha: Optional[date] = Query(None, description="Default: hoy"),
+    fecha: Optional[date] = Query(None, description="Single day (legacy). Si presente, ignora desde/hasta."),
+    desde: Optional[date] = Query(None, description="Inicio del rango (inclusive)"),
+    hasta: Optional[date] = Query(None, description="Fin del rango (inclusive)"),
     db: Session = Depends(get_db_session),
     tenant_id: UUID = Depends(require_tenant),
 ):
-    """Métricas agregadas del día."""
-    target = fecha or date.today()
+    """Metricas agregadas del rango (default: este mes hasta hoy).
+
+    - Si `fecha` se pasa: agrega solo ese dia (legacy).
+    - Si `desde`/`hasta` se pasan: agrega rango.
+    - Sin args: del primer dia del mes actual a hoy.
+    """
+    today = date.today()
+    if fecha:
+        desde = hasta = fecha
+    else:
+        desde = desde or today.replace(day=1)
+        hasta = hasta or today
+
     base = db.query(Pedido).filter(
         Pedido.tenant_id == tenant_id,
-        Pedido.fecha_pedido == target,
+        Pedido.fecha_pedido >= desde,
+        Pedido.fecha_pedido <= hasta,
         Pedido.deleted_at.is_(None),
     )
     pedidos = base.all()
@@ -44,11 +58,14 @@ def resumen_dia(
         Pedido, Pedido.id == LineaPedido.pedido_id,
     ).filter(
         Pedido.tenant_id == tenant_id,
-        Pedido.fecha_pedido == target,
+        Pedido.fecha_pedido >= desde,
+        Pedido.fecha_pedido <= hasta,
     ).scalar() or 0
 
     return {
-        "fecha": target.isoformat(),
+        "desde": desde.isoformat(),
+        "hasta": hasta.isoformat(),
+        "fecha": (desde.isoformat() if desde == hasta else None),  # legacy single-day
         "pedidos_count": n_pedidos,
         "pedidos_requires_review": n_review,
         "lineas_count": int(n_lineas),
