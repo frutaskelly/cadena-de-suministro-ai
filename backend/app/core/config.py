@@ -30,6 +30,11 @@ class Settings(BaseSettings):
         "http://localhost:8000,http://127.0.0.1:3000"
     )
 
+    # Google Drive (port v1 Sprint 11)
+    GOOGLE_DRIVE_FOLDER_ID: str = ""
+    GOOGLE_OAUTH_CREDENTIALS: str = ""
+    GOOGLE_OAUTH_TOKEN: str = ""
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     def allowed_origins_list(self) -> list[str]:

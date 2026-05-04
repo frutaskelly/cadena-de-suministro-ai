@@ -183,9 +183,92 @@ function Attachment({ att }: { att: { nombre: string; mime: string; size: number
   );
 }
 
-// minimal markdown-ish: bold **x**, code `x`, blocks ```lang ... ```
+// Mini-markdown: bold **x**, links [text](url), divider ---
 function renderContent(text: string): React.ReactNode {
-  // Strip the action JSON block from the visible text — we already show it as a badge
-  const visible = text.replace(/```action[\s\S]*?```/g, "").trim();
-  return visible || text;
+  // 1) Strip the action JSON block — ya se muestra como badge
+  const cleaned = text.replace(/```action[\s\S]*?```/g, "").trim();
+  if (!cleaned) return text;
+
+  // 2) Render line-by-line, parseando markdown inline simple
+  const lines = cleaned.split("\n");
+  return lines.map((line, i) => {
+    if (line.trim() === "---") {
+      return (
+        <hr
+          key={i}
+          style={{
+            margin: "12px 0",
+            border: "none",
+            borderTop: "1px solid var(--border-subtle)",
+          }}
+        />
+      );
+    }
+    return (
+      <div key={i} style={{ minHeight: line.trim() ? undefined : "0.6em" }}>
+        {renderInline(line)}
+      </div>
+    );
+  });
+}
+
+function renderInline(line: string): React.ReactNode {
+  // Match [text](url), **bold**, `code`
+  const tokens: React.ReactNode[] = [];
+  const regex = /\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*|`([^`]+)`/g;
+  let lastIndex = 0;
+  let key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(line)) !== null) {
+    if (m.index > lastIndex) {
+      tokens.push(line.slice(lastIndex, m.index));
+    }
+    if (m[1] && m[2]) {
+      // [text](url)
+      tokens.push(
+        <a
+          key={`l-${key++}`}
+          href={m[2]}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: "var(--accent)",
+            textDecoration: "underline",
+            textUnderlineOffset: 2,
+            fontWeight: 500,
+          }}
+        >
+          {m[1]}
+        </a>
+      );
+    } else if (m[3]) {
+      // **bold**
+      tokens.push(
+        <strong key={`b-${key++}`} style={{ fontWeight: 600 }}>
+          {m[3]}
+        </strong>
+      );
+    } else if (m[4]) {
+      // `code`
+      tokens.push(
+        <code
+          key={`c-${key++}`}
+          style={{
+            background: "var(--surface-2)",
+            padding: "1px 5px",
+            borderRadius: 4,
+            fontSize: "0.92em",
+            fontFamily: "ui-monospace, monospace",
+          }}
+        >
+          {m[4]}
+        </code>
+      );
+    }
+    lastIndex = m.index + m[0].length;
+  }
+  if (lastIndex < line.length) {
+    tokens.push(line.slice(lastIndex));
+  }
+  return tokens.length > 0 ? <>{tokens}</> : line;
 }

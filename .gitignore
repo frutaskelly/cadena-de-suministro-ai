@@ -41,3 +41,6 @@ node_modules/
 
 # Logs
 *.log
+
+# Drive credentials (do NOT commit)
+backend/secrets/

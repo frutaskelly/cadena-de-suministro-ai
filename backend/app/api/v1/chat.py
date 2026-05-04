@@ -15,6 +15,7 @@ from ...schemas import (
 from ...services.chat import (
     chat_completion, auto_titulo_conversacion, ChatResponse,
 )
+from ...services.chat_executors import execute_action, render_executor_summary
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -196,6 +197,29 @@ def send_mensaje(
     conv.tokens_in = (conv.tokens_in or 0) + ai_resp.tokens_in
     conv.tokens_out = (conv.tokens_out or 0) + ai_resp.tokens_out
     conv.ultima_actividad = datetime.utcnow()
+
+    # 4) Ejecutar la accion si la AI decidio una y hay attachment
+    if ai_resp.accion and user_msg.adjuntos:
+        try:
+            executor_out = execute_action(
+                db=db,
+                tenant_id=tenant_id,
+                conversacion=conv,
+                user_message=user_msg,
+                accion=ai_resp.accion,
+                accion_payload=ai_resp.accion_payload,
+            )
+            asst_msg.accion_resultado = executor_out
+            if executor_out.get("ejecutado"):
+                # Append summary del executor al contenido del mensaje assistant
+                summary = render_executor_summary(executor_out)
+                asst_msg.contenido = (
+                    asst_msg.contenido.rstrip()
+                    + "\n\n---\n\n"
+                    + summary
+                )
+        except Exception as e:
+            asst_msg.accion_resultado = {"error": str(e)[:300]}
 
     db.commit()
     db.refresh(asst_msg)
