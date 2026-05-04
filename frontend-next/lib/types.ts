@@ -140,6 +140,83 @@ export type InventarioEstado = {
   total_disponible_efectivo: string;
 };
 
+export type Cliente = {
+  id: string;
+  tenant_id: string;
+  codigo: string;
+  tipo: string;
+  legal_name: string;
+  rfc: string | null;
+  regimen_fiscal: string | null;
+  uso_cfdi_default: string | null;
+  forma_pago_default: string | null;
+  metodo_pago_default: string | null;
+  domicilio_fiscal: Record<string, unknown> | null;
+  lista_precios_id: string | null;
+  condiciones_pago: string | null;
+  dias_credito: number | null;
+  custom_fields: Record<string, unknown>;
+  created_at: string;
+};
+
+export type ListaPrecios = {
+  id: string;
+  tenant_id: string;
+  codigo: string;
+  nombre: string;
+  vigencia_desde: string | null;
+  vigencia_hasta: string | null;
+  moneda: string;
+  notas: string | null;
+  created_at: string;
+};
+
+export type Precio = {
+  id: string;
+  lista_id: string;
+  producto_id: string;
+  presentacion: string;
+  precio_unitario: string;
+  vigencia_desde: string | null;
+  vigencia_hasta: string | null;
+};
+
+export type AgenteWhatsapp = {
+  id: string;
+  tenant_id: string;
+  codigo: string;
+  nombre: string;
+  descripcion: string | null;
+  cliente_id: string | null;
+  lista_precios_id: string | null;
+  tipo: string;
+  icono: string | null;
+  color_hex: string | null;
+  activo: boolean;
+  proximo_folio: number;
+  requires_pesos: boolean;
+  config: Record<string, unknown>;
+  system_prompt_addendum: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DocumentoGenerado = {
+  id: string;
+  tenant_id: string;
+  agente_id: string | null;
+  remision_id: string | null;
+  pedido_id: string | null;
+  tipo_documento: string;
+  nombre_archivo: string;
+  fecha_documento: string | null;
+  url_storage: string | null;
+  sha256: string | null;
+  bytes: number | null;
+  metadata_doc: Record<string, unknown>;
+  created_at: string;
+};
+
 export type DashboardResumen = {
   fecha: string;
   pedidos_count: number;

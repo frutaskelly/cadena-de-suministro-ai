@@ -14,23 +14,28 @@ const sections = [
     ],
   },
   {
-    title: "Compras",
+    title: "WhatsApp",
     items: [
-      { href: "/ordenes-compra", label: "Órdenes de compra" },
+      { href: "/agentes-whatsapp", label: "Agentes" },
+      { href: "/documentos", label: "Documentos" },
     ],
+  },
+  {
+    title: "Compras",
+    items: [{ href: "/ordenes-compra", label: "Órdenes de compra" }],
   },
   {
     title: "Catálogo",
     items: [
       { href: "/productos", label: "Productos" },
       { href: "/conversiones", label: "Conversiones" },
+      { href: "/listas-precios", label: "Listas de precios" },
+      { href: "/clientes", label: "Clientes" },
     ],
   },
   {
     title: "Facturación",
-    items: [
-      { href: "/cfdi", label: "CFDI Preview" },
-    ],
+    items: [{ href: "/cfdi", label: "CFDI Preview" }],
   },
 ];
 
