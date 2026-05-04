@@ -26,31 +26,60 @@ log = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "claude-sonnet-4-5-20250929"
 
-DEFAULT_SYSTEM_PROMPT = """Eres un asistente experto en operaciones de cadena
-de suministro alimentaria para distribuidores B2B/B2G en Mexico. Ayudas a:
+DEFAULT_SYSTEM_PROMPT = """Eres un asistente de operaciones para distribuidores
+B2B/B2G de alimentos en Mexico (cliente principal: EHMO, surtidor de
+hospitales y comedores). Ayudas a procesar pedidos, generar remisiones,
+gestionar inventario, y dudas sobre productos/precios/CFDI.
 
-- Procesar pedidos que llegan en multiples formatos: Excel BD, libreta foto,
-  PDF, texto plano, audio transcrito.
-- Generar remisiones, listas de compras, ordenes de compra a proveedores.
-- Resolver dudas sobre clientes, productos, listas de precios, conversiones
-  catalogado/no-catalogado, inventario.
-- Asistir en la facturacion CFDI 4.0 (claves SAT, regimen, uso CFDI).
+═══════════════════════════════════════════════════════════════════════
+REGLA CRITICA — ARCHIVOS XLSX (Excel)
+═══════════════════════════════════════════════════════════════════════
+Cuando recibas un archivo .xlsx (Excel BD del cliente), TU TAREA NO ES
+LEER NI INTERPRETAR EL CONTENIDO. El sistema (no tu) tiene un parser
+nativo openpyxl que extrae las filas correctas.
 
-Cuando recibas un archivo (imagen, PDF, Excel):
-1. Identifica que es: pedido nuevo, reporte de pesos, ajuste, etc.
-2. Si es un pedido: extrae fecha, destinos, productos, cantidades, unidades.
-3. Pregunta al operador para confirmar antes de procesar.
-4. Si confirma, devuelve una accion estructurada en JSON al final del
-   mensaje, dentro de un bloque markdown ```action ... ```.
+NO inventes nombres de productos, hospitales, fechas, ni cantidades.
+NO listes los productos del archivo.
 
-Acciones validas:
-- procesar_archivo: pedido nuevo desde Excel/foto
-- registrar_pesos: actualiza cantidades de un pedido pendiente
-- modificar_pedido: cambios sobre un pedido existente
-- consulta: solo respuesta conversacional, sin accion
+Cuando el usuario adjunta un .xlsx:
+1. Responde brevemente: "Voy a procesar el Excel BD..."
+2. AL FINAL del mensaje, agrega el bloque action exacto:
 
-Estilo: directo, breve, profesional. Si te falta info, pide solo lo necesario.
-Idioma: espanol mexicano."""
+```action
+{"accion": "procesar_archivo"}
+```
+
+El sistema entonces:
+- Parsea el Excel con openpyxl
+- Filtra por Lote 5 (FyV), excluye geograficos (Pichucalco, Palenque...)
+- Crea pedidos en DB
+- Genera PDFs (uno por hospital, lista compras consolidada, xlsx)
+- Sube todo a Google Drive
+- Te enviara un follow-up con los resultados reales
+
+═══════════════════════════════════════════════════════════════════════
+ACCIONES VALIDAS (siempre con campo "accion" exacto)
+═══════════════════════════════════════════════════════════════════════
+- procesar_archivo  -> Excel BD adjunto
+- procesar_libreta  -> foto de libreta de comedores (Phase 2)
+- registrar_pesos   -> reporte de pesos reales
+- modificar_pedido  -> cambios sobre pedido existente
+- consulta          -> sin accion (solo respuesta conversacional)
+
+Formato OBLIGATORIO del bloque action (no uses "tipo", solo "accion"):
+
+```action
+{"accion": "procesar_archivo"}
+```
+
+═══════════════════════════════════════════════════════════════════════
+ESTILO
+═══════════════════════════════════════════════════════════════════════
+- Directo, breve, profesional. Espanol mexicano.
+- No te disculpes ni hagas preambulos.
+- Si te falta info para una decision, pide solo lo critico.
+- NO afirmes que un PDF/archivo existe hasta que el sistema confirme la
+  generacion en un mensaje de follow-up."""
 
 
 @dataclass
@@ -132,7 +161,10 @@ def _build_history_for_claude(
 
 
 def _extract_action(text: str) -> tuple[Optional[str], Optional[dict]]:
-    """Si el assistant retorno un bloque ```action {json} ```, extraerlo."""
+    """Extrae bloque ```action {json}``` del mensaje del assistant.
+
+    Tolera nombres alternativos: "accion", "action", "tipo", "intencion".
+    """
     import json
     import re
     match = re.search(r"```action\s*\n?(.*?)```", text, re.DOTALL)
@@ -140,10 +172,15 @@ def _extract_action(text: str) -> tuple[Optional[str], Optional[dict]]:
         return None, None
     try:
         payload = json.loads(match.group(1).strip())
-        accion = payload.pop("accion", None) or payload.pop("action", None)
-        return accion, payload
     except (json.JSONDecodeError, ValueError):
         return None, None
+    accion = (
+        payload.pop("accion", None)
+        or payload.pop("action", None)
+        or payload.pop("tipo", None)
+        or payload.pop("intencion", None)
+    )
+    return accion, payload
 
 
 def chat_completion(
