@@ -13,6 +13,7 @@ from .factura import CSD, Factura, LineaFactura, Pago, AbonoFactura
 from .proveedor import Proveedor, OrdenCompra, LineaOrdenCompra
 from .remision import Remision, LineaRemision, AjusteRemision
 from .conversion import ConversionProducto
+from .whatsapp import AgenteWhatsapp, DocumentoGenerado
 from .log import EventLog, MensajeLog
 
 __all__ = [
@@ -28,5 +29,6 @@ __all__ = [
     "Proveedor", "OrdenCompra", "LineaOrdenCompra",
     "Remision", "LineaRemision", "AjusteRemision",
     "ConversionProducto",
+    "AgenteWhatsapp", "DocumentoGenerado",
     "EventLog", "MensajeLog",
 ]
