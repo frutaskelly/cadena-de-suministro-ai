@@ -12,6 +12,10 @@ import {
   ErrorBox,
   Badge,
 } from "@/components/ui";
+import DateRangePicker, {
+  DateRange,
+  getPresetRange,
+} from "@/components/DateRangePicker";
 import { api, fmtMoney, fmtNumber } from "@/lib/api";
 import type {
   DashboardResumen,
@@ -26,8 +30,9 @@ export default function DashboardPage() {
   const [topUnits, setTopUnits] = useState<TopUnidades | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fecha, setFecha] = useState(() =>
-    new Date().toISOString().slice(0, 10)
+  // Default: este mes
+  const [range, setRange] = useState<DateRange>(
+    () => getPresetRange("este_mes")!
   );
 
   useEffect(() => {
@@ -36,10 +41,11 @@ export default function DashboardPage() {
       setLoading(true);
       setError(null);
       try {
+        const qs = `desde=${range.desde}&hasta=${range.hasta}`;
         const [r, p, u] = await Promise.all([
-          api<DashboardResumen>(`/api/v1/dashboard/resumen-dia?fecha=${fecha}`),
-          api<TopProductos>(`/api/v1/dashboard/top-productos?limit=10`),
-          api<TopUnidades>(`/api/v1/dashboard/top-unidades?limit=10`),
+          api<DashboardResumen>(`/api/v1/dashboard/resumen-dia?${qs}`),
+          api<TopProductos>(`/api/v1/dashboard/top-productos?${qs}&limit=10`),
+          api<TopUnidades>(`/api/v1/dashboard/top-unidades?${qs}&limit=10`),
         ]);
         setResumen(r);
         setTopProds(p);
@@ -50,7 +56,7 @@ export default function DashboardPage() {
         setLoading(false);
       }
     })();
-  }, [tenant, fecha]);
+  }, [tenant, range]);
 
   return (
     <>
@@ -62,16 +68,12 @@ export default function DashboardPage() {
           <>
             <PageHeader
               title="Vista general"
-              description={`Resumen operativo del día ${fecha}`}
-              actions={
-                <input
-                  type="date"
-                  className="input"
-                  value={fecha}
-                  onChange={(e) => setFecha(e.target.value)}
-                  style={{ width: 160 }}
-                />
+              description={
+                range.desde === range.hasta
+                  ? `Operación del ${range.desde}`
+                  : `Operación del ${range.desde} al ${range.hasta}`
               }
+              actions={<DateRangePicker value={range} onChange={setRange} />}
             />
 
             {error && <ErrorBox error={error} />}
@@ -132,7 +134,7 @@ export default function DashboardPage() {
                       <div className="px-5 pt-5 pb-3">
                         <div className="text-title">Top productos</div>
                         <div className="text-caption">
-                          Más solicitados últimos 30 días
+                          {range.desde} → {range.hasta}
                         </div>
                       </div>
                       {!topProds || topProds.items.length === 0 ? (
@@ -172,7 +174,7 @@ export default function DashboardPage() {
                       <div className="px-5 pt-5 pb-3">
                         <div className="text-title">Top unidades de entrega</div>
                         <div className="text-caption">
-                          Hospitales y comedores con mayor flujo
+                          {range.desde} → {range.hasta}
                         </div>
                       </div>
                       {!topUnits || topUnits.items.length === 0 ? (
