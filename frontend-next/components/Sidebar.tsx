@@ -8,6 +8,7 @@ const sections = [
     title: "Operaciones",
     items: [
       { href: "/", label: "Dashboard" },
+      { href: "/chat", label: "Chat AI" },
       { href: "/pedidos", label: "Pedidos" },
       { href: "/remisiones", label: "Remisiones" },
       { href: "/inventario", label: "Inventario" },

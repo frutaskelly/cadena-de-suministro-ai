@@ -181,6 +181,46 @@ export type Precio = {
   vigencia_hasta: string | null;
 };
 
+export type ChatAttachment = {
+  nombre: string;
+  mime: string;
+  size: number;
+  data_b64?: string;
+};
+
+export type ChatMensaje = {
+  id: string;
+  conversacion_id: string;
+  role: "user" | "assistant" | "system";
+  contenido: string;
+  adjuntos: ChatAttachment[];
+  ai_metadata: Record<string, unknown>;
+  accion: string | null;
+  accion_payload: Record<string, unknown> | null;
+  accion_resultado: Record<string, unknown> | null;
+  created_at: string;
+};
+
+export type ChatConversacion = {
+  id: string;
+  tenant_id: string;
+  agente_id: string | null;
+  user_id: string | null;
+  titulo: string;
+  archivada: boolean;
+  ultima_actividad: string;
+  mensajes_count: number;
+  tokens_in: number;
+  tokens_out: number;
+  metadata_conv: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ChatConversacionDetail = ChatConversacion & {
+  mensajes: ChatMensaje[];
+};
+
 export type AgenteWhatsapp = {
   id: string;
   tenant_id: string;
