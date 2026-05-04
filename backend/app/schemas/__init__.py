@@ -10,6 +10,17 @@ from .contrato import (
     UnidadEntregaCreate, UnidadEntregaOut,
 )
 from .pedido import PedidoCreate, PedidoOut, LineaPedidoCreate, LineaPedidoOut
+from .remision import (
+    RemisionCreate, RemisionOut,
+    LineaRemisionCreate, LineaRemisionOut,
+    AjusteRemisionCreate, AjusteRemisionOut,
+    InventarioTripleEstado,
+)
+from .orden_compra import (
+    OrdenCompraCreate, OrdenCompraOut,
+    LineaOrdenCompraCreate, LineaOrdenCompraOut,
+)
+from .conversion import ConversionCreate, ConversionUpdate, ConversionOut
 
 __all__ = [
     "TenantCreate", "TenantOut", "UserCreate", "UserOut", "MembershipCreate", "MembershipOut",
@@ -20,4 +31,11 @@ __all__ = [
     "ContratoLoteCreate", "ContratoLoteOut",
     "UnidadEntregaCreate", "UnidadEntregaOut",
     "PedidoCreate", "PedidoOut", "LineaPedidoCreate", "LineaPedidoOut",
+    "RemisionCreate", "RemisionOut",
+    "LineaRemisionCreate", "LineaRemisionOut",
+    "AjusteRemisionCreate", "AjusteRemisionOut",
+    "InventarioTripleEstado",
+    "OrdenCompraCreate", "OrdenCompraOut",
+    "LineaOrdenCompraCreate", "LineaOrdenCompraOut",
+    "ConversionCreate", "ConversionUpdate", "ConversionOut",
 ]

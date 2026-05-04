@@ -8,7 +8,10 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .core.config import settings
-from .api.v1 import tenants, clientes, productos, contratos, pedidos, sat, dashboard
+from .api.v1 import (
+    tenants, clientes, productos, contratos, pedidos, sat, dashboard,
+    remisiones, ordenes_compra, conversiones,
+)
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 
@@ -71,6 +74,9 @@ app.include_router(contratos.unidades_router, prefix="/api/v1")
 app.include_router(pedidos.router, prefix="/api/v1")
 app.include_router(sat.router, prefix="/api/v1")
 app.include_router(dashboard.router, prefix="/api/v1")
+app.include_router(remisiones.router, prefix="/api/v1")
+app.include_router(ordenes_compra.router, prefix="/api/v1")
+app.include_router(conversiones.router, prefix="/api/v1")
 
 
 @app.on_event("startup")
