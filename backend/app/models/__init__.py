@@ -15,6 +15,7 @@ from .remision import Remision, LineaRemision, AjusteRemision
 from .conversion import ConversionProducto
 from .whatsapp import AgenteWhatsapp, DocumentoGenerado
 from .chat import ChatConversacion, ChatMensaje
+from .audit import AiDecision, BaseMaestraRun
 from .log import EventLog, MensajeLog
 
 __all__ = [
@@ -32,5 +33,6 @@ __all__ = [
     "ConversionProducto",
     "AgenteWhatsapp", "DocumentoGenerado",
     "ChatConversacion", "ChatMensaje",
+    "AiDecision", "BaseMaestraRun",
     "EventLog", "MensajeLog",
 ]

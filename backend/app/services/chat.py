@@ -120,6 +120,18 @@ generar_relacion
   -> Consolidado del dia (PDF + Excel) con todas las remisiones agrupadas.
   payload: {"fecha_iso": "YYYY-MM-DD"}
 
+procesar_base_maestra
+  -> Construye la Base Maestra semanal a partir de un folder local con
+     archivos Excel de los hospitales (formato APENDICE 4).
+     Output: 1 Excel con 5 hojas (BD, Almacen, Carne, FyV, Hoja1).
+  payload: {
+    "source_folder": "/path/al/folder",
+    "fecha_inicio": "YYYY-MM-DD",
+    "fecha_fin": "YYYY-MM-DD",
+    "base_anterior_path": "/path/Base maestra anterior.xlsx" (opcional, para cross-check)
+  }
+  Si el operador menciona "del 4 al 10 de mayo" + un folder, dispara esto.
+
 consulta
   -> Sin accion (solo respuesta conversacional). NO uses bloque action.
 

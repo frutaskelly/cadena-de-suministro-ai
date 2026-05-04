@@ -198,8 +198,11 @@ def send_mensaje(
     conv.tokens_out = (conv.tokens_out or 0) + ai_resp.tokens_out
     conv.ultima_actividad = datetime.utcnow()
 
-    # 4) Ejecutar la accion si la AI decidio una y hay attachment
-    if ai_resp.accion and user_msg.adjuntos:
+    # 4) Ejecutar la accion si la AI decidio una.
+    # Algunas acciones (procesar_archivo, procesar_libreta) requieren
+    # adjunto; otras (procesar_base_maestra, emitir_remisiones,
+    # generar_relacion, registrar_pesos, modificar/extras) usan solo texto.
+    if ai_resp.accion:
         try:
             executor_out = execute_action(
                 db=db,

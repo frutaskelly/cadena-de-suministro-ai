@@ -32,6 +32,7 @@ from .libreta_processor import procesar_libreta
 from .nota_remision_pdf import generar_nota_remision_pdf
 from .relacion_documentos import generar_relacion_pdf, generar_relacion_xlsx
 from .drive import upload_file
+from .base_maestra_builder import build_base_maestra
 
 log = logging.getLogger(__name__)
 
@@ -682,6 +683,175 @@ def execute_generar_relacion(
     return out
 
 
+# ─── procesar_base_maestra ─────────────────────────────────────────────
+def execute_procesar_base_maestra(
+    db, tenant_id, conversacion, user_message, accion_payload=None
+):
+    """Genera Base Maestra a partir de un folder local.
+
+    payload: {
+      "source_folder": "/path/al/folder",
+      "fecha_inicio": "2026-05-04",
+      "fecha_fin": "2026-05-10",
+      "base_anterior_path": "/path/Base maestra .xlsx" (opcional, cross-check),
+    }
+    """
+    out = {"ejecutado": False, "razon": None, "result": None, "documentos": []}
+    payload = accion_payload or {}
+    source = payload.get("source_folder") or payload.get("folder")
+    fi = payload.get("fecha_inicio")
+    ff = payload.get("fecha_fin")
+    base_ant = payload.get("base_anterior_path")
+
+    if not source or not fi or not ff:
+        out["razon"] = "Falta source_folder, fecha_inicio o fecha_fin"
+        return out
+
+    try:
+        fecha_inicio = date_cls.fromisoformat(fi)
+        fecha_fin = date_cls.fromisoformat(ff)
+    except ValueError:
+        out["razon"] = "Fechas invalidas (formato YYYY-MM-DD)"
+        return out
+
+    source_path = Path(source).expanduser()
+    if not source_path.exists():
+        out["razon"] = f"Folder no existe: {source_path}"
+        return out
+
+    # Crear el run en DB para audit
+    from ..models import BaseMaestraRun
+    run = BaseMaestraRun(
+        tenant_id=tenant_id,
+        fecha_inicio=datetime.combine(fecha_inicio, datetime.min.time()),
+        fecha_fin=datetime.combine(fecha_fin, datetime.min.time()),
+        semana_label=f"{fecha_inicio.isoformat()} al {fecha_fin.isoformat()}",
+        estado="EN_PROGRESO",
+        source_folder=str(source_path),
+        conversacion_id=conversacion.id,
+    )
+    db.add(run)
+    db.flush()
+    started = datetime.utcnow()
+
+    try:
+        output_dir = Path(f"/tmp/cadena_base_maestra/{fecha_inicio.isoformat()}_{fecha_fin.isoformat()}")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / f"Base maestra {fecha_inicio.isoformat()} al {fecha_fin.isoformat()}.xlsx"
+
+        result = build_base_maestra(
+            source_folder=source_path,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            output_path=output_path,
+            base_anterior=Path(base_ant) if base_ant else None,
+        )
+    except Exception as e:
+        log.exception("base_maestra builder fallo")
+        run.estado = "FALLIDA"
+        run.detalle = {"error": str(e)[:500]}
+        run.finished_at = datetime.utcnow()
+        run.elapsed_ms = int((run.finished_at - started).total_seconds() * 1000)
+        db.commit()
+        out["razon"] = f"builder_error: {e}"
+        return out
+
+    # Subir a Drive
+    drive_url = None
+    try:
+        resp = upload_file(
+            output_path,
+            subfolder=f"BaseMaestra_{fecha_inicio.isoformat()}",
+        )
+        if resp:
+            drive_url = resp.get("link")
+    except Exception:
+        log.exception("Drive upload base maestra fallo")
+
+    # Stats
+    ok = sum(1 for h in result.hospitales if h.estado == "OK")
+    warn = sum(1 for h in result.hospitales if h.estado == "WARN")
+    fail = sum(1 for h in result.hospitales if h.estado == "FAIL")
+
+    estado_final = "EXITOSA" if fail == 0 and warn == 0 else (
+        "EXITOSA_CON_WARNINGS" if ok > 0 else "FALLIDA"
+    )
+
+    detalle = [
+        {
+            "hospital": h.nombre,
+            "canonico": h.nombre_canonico,
+            "estado": h.estado,
+            "items": len(h.items),
+            "archivos": h.archivos,
+            "hojas": h.hojas_usadas,
+            "warnings": h.warnings,
+            "errors": h.errors,
+        }
+        for h in result.hospitales
+    ]
+
+    # Update run
+    run.estado = estado_final
+    run.archivos_count = sum(len(h.archivos) for h in result.hospitales)
+    run.hospitales_ok = ok
+    run.hospitales_warning = warn
+    run.hospitales_fallidos = fail
+    run.filas_bd = result.filas_bd
+    run.output_local_path = str(output_path)
+    run.output_drive_url = drive_url
+    run.output_size_bytes = result.output_size
+    run.diff_pct_vs_anterior = result.diff_pct_vs_anterior
+    run.detalle = detalle
+    run.finished_at = datetime.utcnow()
+    run.elapsed_ms = int((run.finished_at - started).total_seconds() * 1000)
+
+    # Registrar documento generado
+    _register_doc(
+        db,
+        tenant_id=tenant_id,
+        agente_id=conversacion.agente_id,
+        tipo="BASE_MAESTRA_XLSX",
+        nombre=output_path.name,
+        fecha=fecha_inicio,
+        drive_url=drive_url,
+        local_path=output_path,
+        extra_meta={
+            "source": "chat_base_maestra",
+            "run_id": str(run.id),
+            "hospitales_ok": ok,
+            "hospitales_warning": warn,
+            "hospitales_fail": fail,
+            "filas_bd": result.filas_bd,
+            "fecha_inicio": fecha_inicio.isoformat(),
+            "fecha_fin": fecha_fin.isoformat(),
+        },
+    )
+    db.commit()
+
+    out["ejecutado"] = True
+    out["result"] = {
+        "fecha_inicio": fecha_inicio.isoformat(),
+        "fecha_fin": fecha_fin.isoformat(),
+        "semana_label": result.semana_label,
+        "filas_bd": result.filas_bd,
+        "hospitales_total": len(result.hospitales),
+        "hospitales_ok": ok,
+        "hospitales_warning": warn,
+        "hospitales_fail": fail,
+        "diff_pct_vs_anterior": result.diff_pct_vs_anterior,
+        "diff_resumen": result.diff_resumen,
+        "detalle": detalle,
+    }
+    out["documentos"] = [{
+        "tipo": "BASE_MAESTRA_XLSX",
+        "nombre": output_path.name,
+        "drive_url": drive_url,
+        "local_path": str(output_path),
+    }]
+    return out
+
+
 # ─── Dispatcher ─────────────────────────────────────────────────────────
 ACTION_DISPATCH = {
     "procesar_archivo": execute_procesar_archivo,
@@ -696,6 +866,9 @@ ACTION_DISPATCH = {
     "consolidar_notas": execute_emitir_remisiones,  # alias
     "generar_relacion": execute_generar_relacion,
     "generar_relacion_surtido": execute_generar_relacion,  # alias
+    "procesar_base_maestra": execute_procesar_base_maestra,
+    "construir_base_maestra": execute_procesar_base_maestra,  # alias
+    "generar_base_maestra": execute_procesar_base_maestra,  # alias
 }
 
 
@@ -761,6 +934,31 @@ def render_executor_summary(out: dict) -> str:
         lines.append(f"- nuevo total: ${r.get('nuevo_total', 0):,.2f}")
     if "remisiones_count" in r:
         lines.append(f"- **{r['remisiones_count']}** remisiones del día → **{r.get('notas_generadas', 0)}** notas generadas")
+
+    # Base Maestra-specific
+    if "hospitales_total" in r:
+        lines.append(
+            f"- Hospitales: **{r['hospitales_ok']} OK · {r['hospitales_warning']} con warnings · "
+            f"{r['hospitales_fail']} fallidos** (de {r['hospitales_total']} totales)"
+        )
+        lines.append(f"- Filas BD generadas: **{r['filas_bd']:,}**")
+        if r.get("diff_pct_vs_anterior") is not None:
+            lines.append(
+                f"- Diferencia vs base maestra anterior: **{r['diff_pct_vs_anterior']*100:.1f}%**"
+            )
+        # Detalle por hospital problematico
+        det = r.get("detalle") or []
+        problematicos = [d for d in det if d["estado"] != "OK"]
+        if problematicos:
+            lines.append("")
+            lines.append("**Hospitales con problemas:**")
+            for d in problematicos:
+                primer_msg = (d.get("errors") or d.get("warnings") or [""])[0]
+                if primer_msg:
+                    primer_msg = primer_msg[:80] + ("…" if len(primer_msg) > 80 else "")
+                lines.append(
+                    f"- _{d['estado']}_ **{d['hospital']}**: {primer_msg}"
+                )
 
     if docs:
         lines.append("")
