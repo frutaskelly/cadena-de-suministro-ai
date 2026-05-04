@@ -1,6 +1,17 @@
-# STATUS — Reporte de la sesión del 2026-05-03
+# STATUS — Reporte consolidado
 
-**Fecha:** 2026-05-03 (madrugada → mañana)
+**Última actualización:** 2026-05-04 (sesión autónoma madrugada — ver `docs/SESION_2026-05-04_AUTONOMA.md`)
+**Branch:** `main` (sin push, todo commit local)
+**Avance MVP:** ~50 % (Sprints 1-8 completos; faltan 9-15)
+
+> **Resumen rápido del estado más reciente:** ver [docs/SESION_2026-05-04_AUTONOMA.md](docs/SESION_2026-05-04_AUTONOMA.md)
+
+> **Numeros vigentes (2026-05-04 02:30):** 78 endpoints, 74 tests pasando, 41 tablas, datos en Supabase production, 97/110 productos clasificados con AI, Sprint 7 (remisiones + ordenes_compra + inventario triple-estado) y Sprint 8 (conversiones + categorias extendidas) entregados.
+
+---
+
+## Histórico — Reporte de la sesión del 2026-05-03
+
 **Branch:** `main` (sin push, todo commit local)
 **Commits:** 6 — `cb95ad8` (Facturama+CFDI builder) ← `f2cf924` (STATUS Sprint 2) ← `0701ee0` (sinonimos) ← `c8bd12f` (Sprint 2 progress) ← `ce26978` (STATUS) ← `1ab65ca` (Sprint 1 foundation)
 **Próximo commit pendiente:** Sprint 5 frontend + tests + clave_sat classifier (esta sesión)
