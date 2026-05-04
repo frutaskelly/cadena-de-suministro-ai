@@ -26,7 +26,15 @@ from ..models import (
 
 
 class RemisionError(Exception):
-    pass
+    """Excepcion de dominio del flujo de remisiones.
+
+    Lleva ambos:
+    - codigo: identificador estable para clientes (ej. "transition_invalid").
+    - message: detalle humano (puede contener IDs internos — no exponerlo crudo).
+    """
+    def __init__(self, message: str, codigo: str = "remision_error"):
+        super().__init__(message)
+        self.codigo = codigo
 
 
 @dataclass
@@ -78,11 +86,12 @@ def generate_remision_from_pedido(
         .first()
     )
     if not pedido:
-        raise RemisionError(f"Pedido {pedido_id} no existe")
+        raise RemisionError(f"Pedido {pedido_id} no existe", codigo="pedido_not_found")
 
     if pedido.estado in ("FACTURADO", "CANCELADO"):
         raise RemisionError(
-            f"Pedido en estado '{pedido.estado}' no admite remision nueva"
+            f"Pedido en estado '{pedido.estado}' no admite remision nueva",
+            codigo="pedido_estado_invalido",
         )
 
     # almacen default si no se especifica
@@ -177,13 +186,16 @@ def transition_remision(
         .first()
     )
     if not rem:
-        raise RemisionError(f"Remision {remision_id} no existe")
+        raise RemisionError(
+            f"Remision {remision_id} no existe", codigo="remision_not_found"
+        )
 
     allowed = valid_transitions.get(rem.estado, [])
     if nuevo_estado not in allowed:
         raise RemisionError(
             f"Transicion invalida: {rem.estado} -> {nuevo_estado}. "
-            f"Permitidas: {allowed}"
+            f"Permitidas: {allowed}",
+            codigo="transition_invalid",
         )
 
     rem.estado = nuevo_estado

@@ -1,5 +1,6 @@
 """Cadena de Suministro AI — FastAPI entry point."""
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -18,18 +19,34 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 logging.basicConfig(level=getattr(logging, settings.LOG_LEVEL))
 log = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    log.info(
+        f"Cadena de Suministro AI starting — env={settings.ENVIRONMENT}, "
+        f"port={settings.PORT}, allowed_origins={settings.allowed_origins_list()}"
+    )
+    yield
+    log.info("Shutting down")
+
+
 app = FastAPI(
     title="Cadena de Suministro AI",
-    version="0.1.0",
+    version="0.2.0",
     description="Plataforma SaaS para coordinación de cadena gobierno-alimentos.",
+    lifespan=lifespan,
 )
 
+# CORS — origins explicitos desde env. Por default solo localhost dev.
+# AUDIT C3: cerrado el wildcard que era CSRF/XSS prone en prod.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten en prod
+    allow_origins=settings.allowed_origins_list(),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "x-tenant-id"],
+    expose_headers=["x-request-id"],
+    max_age=3600,
 )
 
 
@@ -79,8 +96,3 @@ app.include_router(ordenes_compra.router, prefix="/api/v1")
 app.include_router(conversiones.router, prefix="/api/v1")
 app.include_router(whatsapp.router_agentes, prefix="/api/v1")
 app.include_router(whatsapp.router_docs, prefix="/api/v1")
-
-
-@app.on_event("startup")
-def on_startup():
-    log.info(f"Cadena de Suministro AI starting — env={settings.ENVIRONMENT}, port={settings.PORT}")

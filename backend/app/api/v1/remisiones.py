@@ -38,6 +38,7 @@ def list_remisiones(
     limit: int = Query(100, le=1000),
     offset: int = Query(0, ge=0),
 ):
+    # AUDIT H1: cascade load lineas para evitar N+1 cuando UI accede producto.
     q = (
         db.query(Remision)
         .options(selectinload(Remision.lineas))
@@ -136,7 +137,11 @@ def create_remision_from_pedido(
             notas=notas,
         )
     except RemisionError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        # AUDIT H2: codigo publico estable + mensaje human-readable separados.
+        raise HTTPException(
+            status_code=400,
+            detail={"codigo": e.codigo, "mensaje": str(e)},
+        )
     return {
         "remision_id": str(result.remision_id),
         "folio": result.folio,
@@ -165,7 +170,11 @@ def transition_remision_endpoint(
             nuevo_estado=payload.nuevo_estado,
         )
     except RemisionError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        # AUDIT H2: codigo publico estable + mensaje human-readable separados.
+        raise HTTPException(
+            status_code=400,
+            detail={"codigo": e.codigo, "mensaje": str(e)},
+        )
     db.refresh(rem)
     return rem
 
@@ -197,7 +206,11 @@ def ajustar_linea(
             motivo=payload.motivo,
         )
     except RemisionError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        # AUDIT H2: codigo publico estable + mensaje human-readable separados.
+        raise HTTPException(
+            status_code=400,
+            detail={"codigo": e.codigo, "mensaje": str(e)},
+        )
     return ajuste
 
 

@@ -100,7 +100,10 @@ def test_transition_remision_invalida(tenant_id, existing_pedido_id):
         headers={"x-tenant-id": tenant_id},
     )
     assert r.status_code == 400
-    assert "invalida" in r.json()["detail"].lower()
+    # AUDIT H2: detail es {codigo, mensaje} estructurado.
+    detail = r.json()["detail"]
+    assert detail["codigo"] == "transition_invalid"
+    assert "invalida" in detail["mensaje"].lower()
 
 
 def test_transition_remision_valida(tenant_id, existing_pedido_id):
