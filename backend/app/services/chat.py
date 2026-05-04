@@ -60,16 +60,73 @@ El sistema entonces:
 ═══════════════════════════════════════════════════════════════════════
 ACCIONES VALIDAS (siempre con campo "accion" exacto)
 ═══════════════════════════════════════════════════════════════════════
-- procesar_archivo  -> Excel BD adjunto
-- procesar_libreta  -> foto de libreta de comedores (Phase 2)
-- registrar_pesos   -> reporte de pesos reales
-- modificar_pedido  -> cambios sobre pedido existente
-- consulta          -> sin accion (solo respuesta conversacional)
 
-Formato OBLIGATORIO del bloque action (no uses "tipo", solo "accion"):
+procesar_archivo
+  -> Excel BD adjunto. NO inventes contenido.
+  payload: {} (el sistema parsea el Excel)
+  ejemplo: ```action
+{"accion": "procesar_archivo"}
+```
+
+procesar_libreta
+  -> Foto de libreta de comedores SUREÑA. EXTRAE de la imagen los
+     destinos y productos. La libreta tipicamente tiene 2-6 destinos
+     (Comedor Patria, CCI, 6 de Junio, Shanka, Jobo, Copoya).
+  payload: {
+    "fecha_iso": "YYYY-MM-DD",
+    "destinos": [
+      {"destino": "Comedor Patria", "productos": [
+        {"alimento": "Papas", "cantidad": 50, "presentacion": "Kilo"},
+        {"alimento": "Sandías", "cantidad": 8, "presentacion": "Pieza"}
+      ]}
+    ]
+  }
+
+registrar_pesos
+  -> El operador reporta pesos reales post-surtido (ej. "Patria: espinacas 4.5 kg").
+  payload: {
+    "fecha_iso": "YYYY-MM-DD",
+    "pesos": [
+      {"destino": "Comedor Patria", "alimento": "Espinacas", "kg": 4.5}
+    ]
+  }
+
+modificar_pedido
+  -> Cambios sobre un pedido existente (ajustar cantidades, eliminar lineas).
+  payload: {
+    "fecha_iso": "YYYY-MM-DD",  # o "pedido_id" o "folio"
+    "destino": "Hospital General Tapachula",
+    "cambios": [
+      {"alimento": "Manzana", "cantidad": 25},
+      {"alimento": "Sandía", "eliminar": true}
+    ]
+  }
+
+extras_pedido
+  -> Agregar productos a un pedido existente.
+  payload: {
+    "fecha_iso": "YYYY-MM-DD",
+    "destino": "Hospital General Tapachula",
+    "extras": [
+      {"alimento": "Manzana", "cantidad": 10, "presentacion": "Kilo"}
+    ]
+  }
+
+emitir_remisiones
+  -> Generar PDF Nota de Remision para cada remision CONFIRMADA del dia.
+  payload: {"fecha_iso": "YYYY-MM-DD"}
+
+generar_relacion
+  -> Consolidado del dia (PDF + Excel) con todas las remisiones agrupadas.
+  payload: {"fecha_iso": "YYYY-MM-DD"}
+
+consulta
+  -> Sin accion (solo respuesta conversacional). NO uses bloque action.
+
+Formato OBLIGATORIO del bloque action (campo se llama "accion"):
 
 ```action
-{"accion": "procesar_archivo"}
+{"accion": "<nombre_accion>", ...resto del payload...}
 ```
 
 ═══════════════════════════════════════════════════════════════════════
